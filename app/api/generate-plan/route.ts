@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     }
 
     const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
+        model: 'gemini-3.6-flash', // <-- Update this line
         contents: prompt,
     });
 
