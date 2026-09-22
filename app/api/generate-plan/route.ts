@@ -11,13 +11,30 @@ export async function POST(req: Request) {
 
     let prompt = `Act as an expert personal trainer and nutritionist. 
     User Profile: Age ${stats.age}, Weight ${stats.weight}kg, Height ${stats.height}cm, Goal: ${stats.goal}. 
-    Please provide a concise 7-day Exercise Plan and a daily Nutrition Plan. Return the response in two clear sections: "EXERCISE_PLAN" and "NUTRITION_PLAN".`;
+    Please provide a 7-day Exercise Plan and a daily Nutrition Plan. 
+    
+    IMPORTANT: You must format your exact response using these two headers:
+    [EXERCISE_START]
+    (write the exercise plan here)
+    [EXERCISE_END]
+    
+    [NUTRITION_START]
+    (write the nutrition plan here)
+    [NUTRITION_END]`;
 
-    // Dynamic prompt if the user hits the "I'm too tired" button
     if (isTired) {
       prompt = `The user is feeling too tired to complete their current exercise plan today. 
       Here is their current plan: ${currentPlan}.
-      Please modify today's and tomorrow's workout to be an active recovery or lighter session, and adjust the nutrition slightly to match the lower energy expenditure. Return the response in two sections: "EXERCISE_PLAN" and "NUTRITION_PLAN".`;
+      Please modify today's and tomorrow's workout to be an active recovery or lighter session, and adjust the nutrition slightly to match the lower energy expenditure. 
+      
+      IMPORTANT: You must format your exact response using these two headers:
+      [EXERCISE_START]
+      (write the adjusted exercise plan here)
+      [EXERCISE_END]
+      
+      [NUTRITION_START]
+      (write the adjusted nutrition plan here)
+      [NUTRITION_END]`;
     }
 
     const response = await ai.models.generateContent({
@@ -26,14 +43,18 @@ export async function POST(req: Request) {
     });
 
     const text = response.text || "";
-    
-    // Simple parsing (in a production app, use JSON schema generation with Gemini)
-    const exerciseSplit = text.split('NUTRITION_PLAN');
-    const exercisePlan = exerciseSplit[0].replace('EXERCISE_PLAN', '').trim();
-    const nutritionPlan = exerciseSplit[1] ? exerciseSplit[1].trim() : "No nutrition plan generated.";
+    console.log("Raw AI Response:", text); // This will show in your terminal
+
+    // Extract content between the tags
+    const exerciseMatch = text.match(/\[EXERCISE_START\]([\s\S]*?)\[EXERCISE_END\]/);
+    const nutritionMatch = text.match(/\[NUTRITION_START\]([\s\S]*?)\[NUTRITION_END\]/);
+
+    const exercisePlan = exerciseMatch ? exerciseMatch[1].trim() : "Failed to parse exercise plan.";
+    const nutritionPlan = nutritionMatch ? nutritionMatch[1].trim() : "Failed to parse nutrition plan.";
 
     return NextResponse.json({ exercisePlan, nutritionPlan });
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to generate plan' }, { status: 500 });
+  } catch (error: any) {
+    console.error("Gemini API Error:", error);
+    return NextResponse.json({ error: error.message || 'Failed to generate plan' }, { status: 500 });
   }
 }
