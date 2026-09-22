@@ -12,39 +12,60 @@ export default function Onboarding() {
   const { setUserStats, setPlans } = useAppStore();
 
   const handleSaveAndGenerate = async () => {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
 
-    if (!user) {
-      alert("Please log in first!");
-      router.push("/auth");
-      return;
+      if (!user) {
+        alert("Please log in first!");
+        router.push("/auth");
+        return;
+      }
+
+      // 1. Save to Supabase
+      const { error: dbError } = await supabase.from("profiles").upsert({
+        id: user.id,
+        age: parseFloat(stats.age),
+        weight: parseFloat(stats.weight),
+        height: parseFloat(stats.height),
+        goal: stats.goal,
+        updated_at: new Date().toISOString(),
+      });
+
+      if (dbError) {
+        alert(`Database Error: ${dbError.message}`);
+        setLoading(false);
+        return;
+      }
+
+      setUserStats(stats);
+
+      // 2. Call Gemini API
+      const res = await fetch("/api/generate-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stats, isTired: false }),
+      });
+
+      const data = await res.json();
+
+      // Catch API errors (like bad API keys)
+      if (!res.ok || data.error) {
+        alert(`AI Error: ${data.error || 'Failed to generate plan'}`);
+        setLoading(false);
+        return;
+      }
+
+      // 3. Save to global state and redirect
+      setPlans(data.exercisePlan, data.nutritionPlan);
+      setLoading(false);
+      router.push("/dashboard");
+
+    } catch (error: any) {
+      alert(`Unexpected Error: ${error.message}`);
+      setLoading(false);
     }
-
-    await supabase.from("profiles").upsert({
-      id: user.id,
-      age: parseFloat(stats.age),
-      weight: parseFloat(stats.weight),
-      height: parseFloat(stats.height),
-      goal: stats.goal,
-      updated_at: new Date().toISOString(),
-    });
-
-    setUserStats(stats);
-
-    const res = await fetch("/api/generate-plan", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stats, isTired: false }),
-    });
-
-    const data = await res.json();
-    setPlans(data.exercisePlan, data.nutritionPlan);
-
-    setLoading(false);
-    router.push("/dashboard");
   };
-
   const inputClass = "w-full bg-slate-950/50 border border-slate-700 text-white placeholder:text-slate-500 rounded-xl p-4 focus:ring-2 focus:ring-blue-500 outline-none transition mb-4";
 
   return (
