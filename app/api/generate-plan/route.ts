@@ -6,38 +6,35 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { stats, isTired, currentPlan } = body;
+    const { stats, isTired } = await req.json();
 
-    let prompt = `Act as an expert personal trainer and nutritionist. 
-    User Profile: Age ${stats.age}, Weight ${stats.weight}kg, Height ${stats.height}cm, Goal: ${stats.goal}. 
-    Please provide a 7-day Exercise Plan and a daily Nutrition Plan. 
+    const prompt = `Act as an expert personal trainer and nutritionist. 
+    User: Age ${stats.age}, Weight ${stats.weight}kg, Height ${stats.height}cm, Goal: ${stats.goal}. 
+    ${isTired ? "USER IS TIRED TODAY. Adjust the routine for active recovery and lower calories." : ""}
     
-    IMPORTANT: You must format your exact response using these two headers:
-    [EXERCISE_START]
-    (write the exercise plan here)
-    [EXERCISE_END]
-    
-    [NUTRITION_START]
-    (write the nutrition plan here)
-    [NUTRITION_END]`;
+    Return ONLY a valid JSON object matching this exact structure, with no markdown formatting or backticks around it:
+    {
+      "exercisePlan": {
+        "overview": "Short motivational overview",
+        "weeklyRoutine": [
+          { 
+            "day": "Monday", 
+            "focus": "Upper Body / Push", 
+            "duration": "45 mins", 
+            "intensity": "High", 
+            "exercises": ["Bench Press (3x10)", "Overhead Press (3x12)"] 
+          }
+        ]
+      },
+      "nutritionPlan": {
+        "dailyCalories": 2200,
+        "macros": { "protein": 150, "carbs": 200, "fat": 65 },
+        "meals": [
+          { "time": "Breakfast", "name": "Protein Oatmeal", "calories": 450, "desc": "Oats with whey and berries" }
+        ]
+      }
+    }`;
 
-    if (isTired) {
-      prompt = `The user is feeling too tired to complete their current exercise plan today. 
-      Here is their current plan: ${currentPlan}.
-      Please modify today's and tomorrow's workout to be an active recovery or lighter session, and adjust the nutrition slightly to match the lower energy expenditure. 
-      
-      IMPORTANT: You must format your exact response using these two headers:
-      [EXERCISE_START]
-      (write the adjusted exercise plan here)
-      [EXERCISE_END]
-      
-      [NUTRITION_START]
-      (write the adjusted nutrition plan here)
-      [NUTRITION_END]`;
-    }
-
-    // Automatic Retry Logic
     let retries = 3;
     let response;
     
@@ -46,30 +43,22 @@ export async function POST(req: Request) {
         response = await ai.models.generateContent({
             model: 'gemini-3.6-flash',
             contents: prompt,
+            config: { responseMimeType: "application/json" } // Forces JSON output
         });
-        break; // If successful, break out of the loop
+        break;
       } catch (err: any) {
         if (err?.status === 'UNAVAILABLE' && retries > 1) {
           retries--;
-          console.log(`Server overloaded. Retrying... (${retries} attempts left)`);
-          await new Promise(res => setTimeout(res, 2000)); // Wait 2 seconds before retrying
+          await new Promise(res => setTimeout(res, 2000));
         } else {
-          throw err; // If it's a different error or we are out of retries, throw it
+          throw err;
         }
       }
     }
 
-    const text = response?.text || "";
-
-    const exerciseMatch = text.match(/\[EXERCISE_START\]([\s\S]*?)\[EXERCISE_END\]/);
-    const nutritionMatch = text.match(/\[NUTRITION_START\]([\s\S]*?)\[NUTRITION_END\]/);
-
-    const exercisePlan = exerciseMatch ? exerciseMatch[1].trim() : "Failed to parse exercise plan.";
-    const nutritionPlan = nutritionMatch ? nutritionMatch[1].trim() : "Failed to parse nutrition plan.";
-
-    return NextResponse.json({ exercisePlan, nutritionPlan });
+    const data = JSON.parse(response?.text || "{}");
+    return NextResponse.json({ exercisePlan: data.exercisePlan, nutritionPlan: data.nutritionPlan });
   } catch (error: any) {
-    console.error("Gemini API Error:", error);
-    return NextResponse.json({ error: error.message || 'Failed to generate plan' }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
