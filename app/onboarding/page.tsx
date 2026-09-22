@@ -13,8 +13,6 @@ export default function Onboarding() {
 
   const handleSaveAndGenerate = async () => {
     setLoading(true);
-
-    // Get current logged-in user
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -23,7 +21,6 @@ export default function Onboarding() {
       return;
     }
 
-    // Save/Update stats in Supabase
     await supabase.from("profiles").upsert({
       id: user.id,
       age: parseFloat(stats.age),
@@ -35,7 +32,6 @@ export default function Onboarding() {
 
     setUserStats(stats);
 
-    // Call Gemini API to generate plan
     const res = await fetch("/api/generate-plan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -49,40 +45,23 @@ export default function Onboarding() {
     router.push("/dashboard");
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-gray-50">
-      <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-2 text-gray-800">Your Fitness Details</h1>
-        <p className="text-gray-500 text-sm mb-6">This data helps the AI personalize your plan.</p>
+  const inputClass = "w-full bg-slate-950/50 border border-slate-700 text-white placeholder:text-slate-500 rounded-xl p-4 focus:ring-2 focus:ring-blue-500 outline-none transition mb-4";
 
-        <input
-          placeholder="Age"
-          type="number"
-          className="w-full mb-4 p-2 border rounded text-black"
-          onChange={(e) => setStats({ ...stats, age: e.target.value })}
-        />
-        <input
-          placeholder="Weight (kg)"
-          type="number"
-          className="w-full mb-4 p-2 border rounded text-black"
-          onChange={(e) => setStats({ ...stats, weight: e.target.value })}
-        />
-        <input
-          placeholder="Height (cm)"
-          type="number"
-          className="w-full mb-4 p-2 border rounded text-black"
-          onChange={(e) => setStats({ ...stats, height: e.target.value })}
-        />
-        <input
-          placeholder="Goal (e.g. Lose 5kg, Build leg strength)"
-          className="w-full mb-6 p-2 border rounded text-black"
-          onChange={(e) => setStats({ ...stats, goal: e.target.value })}
-        />
+  return (
+    <div className="min-h-[80vh] flex items-center justify-center">
+      <div className="bg-slate-900/80 backdrop-blur-xl p-8 sm:p-10 rounded-3xl border border-slate-800 shadow-2xl w-full max-w-lg">
+        <h1 className="text-3xl font-bold mb-2 text-white">Your Fitness Details</h1>
+        <p className="text-slate-400 text-sm mb-8">This data helps the AI personalize your exact protocol.</p>
+
+        <input placeholder="Age" type="number" className={inputClass} onChange={(e) => setStats({ ...stats, age: e.target.value })} />
+        <input placeholder="Weight (kg)" type="number" className={inputClass} onChange={(e) => setStats({ ...stats, weight: e.target.value })} />
+        <input placeholder="Height (cm)" type="number" className={inputClass} onChange={(e) => setStats({ ...stats, height: e.target.value })} />
+        <input placeholder="Goal (e.g. Lose 5kg, Build leg strength)" className={inputClass} onChange={(e) => setStats({ ...stats, goal: e.target.value })} />
 
         <button
           onClick={handleSaveAndGenerate}
           disabled={loading}
-          className="w-full bg-blue-600 text-white p-3 rounded-lg font-semibold hover:bg-blue-700"
+          className="w-full mt-4 bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg shadow-blue-900/50 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
         >
           {loading ? "AI is generating your customized plan..." : "Save & Generate AI Plan"}
         </button>
