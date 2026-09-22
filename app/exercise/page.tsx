@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useAppStore } from '@/store';
 
 export default function ExercisePage() {
-  const { exercisePlan, userStats, setPlans, nutritionPlan } = useAppStore();
+  const { exercisePlan, userStats, setPlans } = useAppStore();
   const [loading, setLoading] = useState(false);
 
   const handleTooTired = async () => {
@@ -38,30 +38,32 @@ export default function ExercisePage() {
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {exercisePlan.weeklyRoutine.map((day: any, i: number) => (
           <div key={i} className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col">
-            {/* Image Placeholder - Uses Unsplash nature/fitness queries */}
-            <div className="h-32 bg-slate-800 relative">
-              <img 
-                src={`https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&q=80&auto=format&fit=crop&sig=${i}`} 
-                alt="Workout" 
-                className="object-cover w-full h-full opacity-60 mix-blend-overlay"
-              />
-              <div className="absolute inset-0 p-4 flex flex-col justify-end bg-gradient-to-t from-slate-900 to-transparent">
-                <h3 className="text-xl font-bold text-white">{day.day}</h3>
-                <p className="text-blue-400 font-medium text-sm">{day.focus}</p>
-              </div>
-            </div>
             
-            <div className="p-5 flex-1">
-              <div className="flex gap-2 mb-4 text-xs font-bold">
+            <div className="p-5 border-b border-slate-800 bg-slate-900">
+              <h3 className="text-xl font-bold text-white">{day.day}</h3>
+              <p className="text-blue-400 font-medium text-sm mb-3">{day.focus}</p>
+              <div className="flex gap-2 text-xs font-bold">
                 <span className="bg-slate-800 text-slate-300 px-3 py-1 rounded-full">⏱ {day.duration}</span>
                 <span className={`px-3 py-1 rounded-full ${day.intensity === 'High' ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
                   🔥 {day.intensity}
                 </span>
               </div>
-              <ul className="space-y-2">
-                {day.exercises.map((ex: string, idx: number) => (
-                  <li key={idx} className="text-slate-300 text-sm flex items-start gap-2">
-                    <span className="text-blue-500 mt-0.5">•</span> {ex}
+            </div>
+            
+            <div className="p-5 flex-1">
+              <ul className="space-y-4">
+                {day.exercises.map((ex: any, idx: number) => (
+                  <li key={idx} className="flex gap-4 items-center bg-slate-950/50 p-3 rounded-xl border border-slate-800/50 hover:border-slate-600 transition">
+                    <img 
+                      src={`https://image.pollinations.ai/prompt/${encodeURIComponent(ex.imagePrompt + " fitness instruction realistic")}?width=150&height=150&nologo=true`} 
+                      alt={ex.name} 
+                      className="w-16 h-16 rounded-lg object-cover bg-slate-800"
+                      loading="lazy"
+                    />
+                    <div>
+                      <h4 className="text-slate-200 font-bold text-sm">{ex.name}</h4>
+                      <p className="text-slate-400 text-xs mt-1">{ex.details}</p>
+                    </div>
                   </li>
                 ))}
               </ul>
