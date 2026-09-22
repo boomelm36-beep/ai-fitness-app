@@ -7,15 +7,25 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 export async function POST(req: Request) {
   try {
     const { stats, isTired } = await req.json();
+    
+    // Get today's day of the week to align the schedule
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
 
     const prompt = `Act as an expert personal trainer and nutritionist. 
     User: Age ${stats.age}, Weight ${stats.weight}kg, Height ${stats.height}cm, Goal: ${stats.goal}. 
-    ${isTired ? "USER IS TIRED TODAY. Adjust the routine for active recovery and lower calories." : ""}
+    Equipment Available: ${stats.equipment.length > 0 ? stats.equipment.join(", ") : "Bodyweight only"}.
+    Swimming Pool Access: ${stats.swimmingPool ? "Yes" : "No"}.
+
+    ${isTired ? "USER IS TIRED TODAY. Adjust today's routine for active recovery and lower calories." : ""}
     
-    Return ONLY a valid JSON object matching this exact structure, with no markdown formatting or backticks around it:
+    CONSTRAINTS:
+    1. SCHEDULE: Today is ${today}. Generate a 7-day schedule. You MUST explicitly make Saturday and Sunday rest or light recovery days. 
+    2. NUTRITION: Meals must be very easy to find (standard grocery items or common takeout) and easy/fast to prepare. No complex recipes.
+
+    Return ONLY a valid JSON object matching this exact structure:
     {
       "exercisePlan": {
-        "overview": "Short motivational overview",
+        "overview": "Short motivational overview based on their equipment and goal.",
         "weeklyRoutine": [
           { 
             "day": "Monday", 
@@ -30,7 +40,7 @@ export async function POST(req: Request) {
         "dailyCalories": 2200,
         "macros": { "protein": 150, "carbs": 200, "fat": 65 },
         "meals": [
-          { "time": "Breakfast", "name": "Protein Oatmeal", "calories": 450, "desc": "Oats with whey and berries" }
+          { "time": "Breakfast", "name": "Protein Oatmeal", "calories": 450, "desc": "Oats with whey, easy to prep in 2 mins." }
         ]
       }
     }`;
@@ -43,7 +53,7 @@ export async function POST(req: Request) {
         response = await ai.models.generateContent({
             model: 'gemini-3.6-flash',
             contents: prompt,
-            config: { responseMimeType: "application/json" } // Forces JSON output
+            config: { responseMimeType: "application/json" }
         });
         break;
       } catch (err: any) {

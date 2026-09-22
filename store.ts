@@ -1,11 +1,20 @@
 // store.ts
 import { create } from 'zustand'
 
+interface UserStats {
+  weight: string;
+  height: string;
+  goal: string;
+  age: string;
+  equipment: string[];
+  swimmingPool: boolean;
+}
+
 interface AppState {
-  userStats: { weight: string; height: string; goal: string; age: string } | null;
+  userStats: UserStats | null;
   exercisePlan: any | null;
   nutritionPlan: any | null;
-  setUserStats: (stats: any) => void;
+  setUserStats: (stats: UserStats) => void;
   setPlans: (exercise: any, nutrition: any) => void;
 }
 
