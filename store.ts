@@ -1,5 +1,6 @@
 // store.ts
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 interface UserStats {
   weight: string;
@@ -18,10 +19,17 @@ interface AppState {
   setPlans: (exercise: any, nutrition: any) => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
-  userStats: null,
-  exercisePlan: null,
-  nutritionPlan: null,
-  setUserStats: (stats) => set({ userStats: stats }),
-  setPlans: (exercise, nutrition) => set({ exercisePlan: exercise, nutritionPlan: nutrition }),
-}))
+export const useAppStore = create<AppState>()(
+  persist(
+    (set) => ({
+      userStats: null,
+      exercisePlan: null,
+      nutritionPlan: null,
+      setUserStats: (stats) => set({ userStats: stats }),
+      setPlans: (exercise, nutrition) => set({ exercisePlan: exercise, nutritionPlan: nutrition }),
+    }),
+    {
+      name: 'ai-fit-storage', // This key saves the data in localStorage
+    }
+  )
+)

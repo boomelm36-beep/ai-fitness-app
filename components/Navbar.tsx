@@ -19,17 +19,33 @@ export default function Navbar() {
   const [quote, setQuote] = useState<string>("");
 
   useEffect(() => {
-    // Pick a quote based on the current day of the week
     setQuote(MOTIVATION_QUOTES[new Date().getDay()]);
     
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase.from('profiles').select('username').eq('id', user.id).single();
-        if (data?.username) setUsername(data.username);
-      }
+    // Function to fetch the username safely
+    const fetchUser = async (userId: string) => {
+      const { data } = await supabase.from('profiles').select('username').eq('id', userId).single();
+      if (data?.username) setUsername(data.username);
     };
-    fetchUser();
+
+    // 1. Check current session on load/refresh
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchUser(session.user.id);
+      }
+    });
+
+    // 2. Listen for login/logout events
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        fetchUser(session.user.id);
+      } else {
+        setUsername("Athlete"); // Reset on logout
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   return (
@@ -41,7 +57,7 @@ export default function Navbar() {
             <Link href="/" className="font-extrabold text-xl tracking-tight text-white flex items-center gap-2">
               <span className="text-blue-500">⚡</span> AI Fit
             </Link>
-            <p className="text-xs text-slate-400 font-medium mt-1">
+            <p className="text-xs text-slate-400 font-medium mt-1 text-center sm:text-left">
               Welcome, <span className="text-blue-400">{username}</span>! {quote}
             </p>
           </div>
