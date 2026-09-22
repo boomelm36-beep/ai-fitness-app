@@ -37,15 +37,30 @@ export async function POST(req: Request) {
       [NUTRITION_END]`;
     }
 
-    const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash', // <-- Update this line
-        contents: prompt,
-    });
+    // Automatic Retry Logic
+    let retries = 3;
+    let response;
+    
+    while (retries > 0) {
+      try {
+        response = await ai.models.generateContent({
+            model: 'gemini-3.6-flash',
+            contents: prompt,
+        });
+        break; // If successful, break out of the loop
+      } catch (err: any) {
+        if (err?.status === 'UNAVAILABLE' && retries > 1) {
+          retries--;
+          console.log(`Server overloaded. Retrying... (${retries} attempts left)`);
+          await new Promise(res => setTimeout(res, 2000)); // Wait 2 seconds before retrying
+        } else {
+          throw err; // If it's a different error or we are out of retries, throw it
+        }
+      }
+    }
 
-    const text = response.text || "";
-    console.log("Raw AI Response:", text); // This will show in your terminal
+    const text = response?.text || "";
 
-    // Extract content between the tags
     const exerciseMatch = text.match(/\[EXERCISE_START\]([\s\S]*?)\[EXERCISE_END\]/);
     const nutritionMatch = text.match(/\[NUTRITION_START\]([\s\S]*?)\[NUTRITION_END\]/);
 
