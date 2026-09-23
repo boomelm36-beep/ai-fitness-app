@@ -17,6 +17,27 @@ export default function DashboardPage() {
     ? (currentWeight / (heightInMeters * heightInMeters)).toFixed(1) 
     : "--";
 
+  // --- NEW: Calculate BMI Grade and dynamic styling ---
+  let bmiGrade = "";
+  let bmiColor = "text-slate-400";
+  const numericBMI = parseFloat(currentBMI);
+
+  if (!isNaN(numericBMI)) {
+    if (numericBMI < 18.5) {
+      bmiGrade = "Underweight";
+      bmiColor = "text-blue-400";
+    } else if (numericBMI < 25) {
+      bmiGrade = "Normal Weight";
+      bmiColor = "text-emerald-400";
+    } else if (numericBMI < 30) {
+      bmiGrade = "Overweight";
+      bmiColor = "text-orange-400";
+    } else {
+      bmiGrade = "Obese";
+      bmiColor = "text-red-500";
+    }
+  }
+
   // Fetch weight history and calculate historical BMI for the charts
   useEffect(() => {
     const fetchWeightHistory = async () => {
@@ -37,7 +58,6 @@ export default function DashboardPage() {
         }));
         setChartData(formattedData);
       } else if (currentWeight > 0) {
-        // Fallback if no logs exist yet, just show current weight
         setChartData([{
           date: 'Today',
           weight: currentWeight,
@@ -71,16 +91,20 @@ export default function DashboardPage() {
           { label: "Weight", value: currentWeight ? `${currentWeight} kg` : "--", color: "text-white" },
           { label: "Height", value: userStats?.height ? `${userStats.height} cm` : "--", color: "text-white" },
           { label: "Age", value: userStats?.age || "--", color: "text-white" },
-          { label: "Current BMI", value: currentBMI, color: "text-emerald-400" }
+          // --- UPDATED: Display BMI with Grade ---
+          { label: "Current BMI", value: isNaN(numericBMI) ? "--" : `${currentBMI}`, grade: bmiGrade, color: bmiColor }
         ].map((stat, i) => (
-          <div key={i} className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800 shadow-sm">
+          <div key={i} className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800 shadow-sm flex flex-col justify-center">
             <p className="text-sm text-slate-400 font-medium mb-1">{stat.label}</p>
             <p className={`text-xl sm:text-2xl font-bold capitalize ${stat.color}`}>{stat.value}</p>
+            {stat.grade && (
+              <p className={`text-xs font-semibold mt-1 ${stat.color}`}>{stat.grade}</p>
+            )}
           </div>
         ))}
       </div>
 
-      {/* Progress Charts */}
+      {/* Progress Charts (Keep existing chart code below...) */}
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800 shadow-sm h-80 flex flex-col">
           <h2 className="text-lg font-bold text-white mb-4">Weight Tracking (kg)</h2>
@@ -113,7 +137,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions (Keep existing action buttons below...) */}
       <div className="grid sm:grid-cols-2 gap-6">
         <Link href="/exercise" className="group block bg-gradient-to-br from-blue-600 to-blue-800 text-white p-8 rounded-2xl shadow-lg shadow-blue-900/20 hover:scale-[1.02] transition-transform">
           <h2 className="text-2xl font-bold mb-2">Exercise Protocol</h2>
