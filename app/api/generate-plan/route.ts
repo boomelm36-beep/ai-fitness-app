@@ -1,8 +1,8 @@
 // app/api/generate-plan/route.ts
 import { NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
+import Groq from 'groq-sdk';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export async function POST(req: Request) {
   try {
@@ -11,7 +11,7 @@ export async function POST(req: Request) {
 
     const prompt = `Act as an expert personal trainer and nutritionist. 
     User: Age ${stats.age}, Weight ${stats.weight}kg, Height ${stats.height}cm, Goal: ${stats.goal}. 
-    Equipment Available: ${stats.equipment.length > 0 ? stats.equipment.join(", ") : "Bodyweight only"}.
+    Equipment Available: ${stats.equipment?.length > 0 ? stats.equipment.join(", ") : "Bodyweight only"}.
     Swimming Pool Access: ${stats.swimmingPool ? "Yes" : "No"}.
 
     ${isTired ? "USER IS TIRED TODAY. Adjust today's routine for active recovery and lower calories." : ""}
@@ -20,9 +20,9 @@ export async function POST(req: Request) {
     1. SCHEDULE: Today is ${today}. Generate a 7-day schedule. Make Saturday and Sunday rest or light recovery days.
     2. SWIMMING: If Swimming Pool Access is Yes, you MUST ONLY schedule swimming activities on Saturday or Sunday. Do not schedule swimming on weekdays.
     3. NUTRITION: Meals must be very easy to find and easy to prepare.
-    4. IMAGES: For every exercise, provide a short 3-5 word descriptive prompt showing a person doing the movement (e.g., "man doing dumbbell bicep curl").
+    4. IMAGES: For every exercise, provide a short 3-5 word descriptive prompt showing a person doing the movement.
 
-    Return ONLY a valid JSON object matching this exact structure:
+    You MUST output a valid JSON object matching this exact structure:
     {
       "exercisePlan": {
         "overview": "Short motivational overview based on their equipment and goal.",
@@ -47,30 +47,29 @@ export async function POST(req: Request) {
       }
     }`;
 
-    let retries = 3;
-    let response;
-    
-    while (retries > 0) {
-      try {
-        response = await ai.models.generateContent({
-            model: 'gemini-3.6-flash',
-            contents: prompt,
-            config: { responseMimeType: "application/json" }
-        });
-        break;
-      } catch (err: any) {
-        if (err?.status === 'UNAVAILABLE' && retries > 1) {
-          retries--;
-          await new Promise(res => setTimeout(res, 2000));
-        } else {
-          throw err;
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: "You are a fitness and nutrition AI. You only output valid JSON. Do not include markdown tags like ```json or any other text.",
+        },
+        {
+          role: "user",
+          content: prompt,
         }
-      }
-    }
+      ],
+      model: "llama3-70b-8192",
+      temperature: 0.5,
+      // This strict formatting prevents the UI-breaking bugs
+      response_format: { type: "json_object" }, 
+    });
 
-    const data = JSON.parse(response?.text || "{}");
+    const textResponse = chatCompletion.choices[0]?.message?.content || "{}";
+    const data = JSON.parse(textResponse);
+
     return NextResponse.json({ exercisePlan: data.exercisePlan, nutritionPlan: data.nutritionPlan });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Groq API Error:", error);
+    return NextResponse.json({ error: error.message || "Failed to connect to AI" }, { status: 500 });
   }
 }
