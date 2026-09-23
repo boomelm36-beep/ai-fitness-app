@@ -1,6 +1,6 @@
 // app/nutrition/page.tsx
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAppStore } from "@/store";
 import { supabase } from "@/lib/supabase";
 
@@ -9,6 +9,9 @@ export default function NutritionPage() {
   const [foodInput, setFoodInput] = useState("");
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // New ref for the hidden file input
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchLogs();
@@ -25,19 +28,41 @@ export default function NutritionPage() {
     if (data) setLogs(data);
   };
 
-  const logFood = async (e: React.FormEvent) => {
+  // Handles text submission
+  const logFoodText = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!foodInput) return;
+    await processFoodLog({ food: foodInput });
+    setFoodInput("");
+  };
+
+  // Handles image selection/camera capture
+  const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Convert the image to a base64 string
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64String = reader.result as string;
+      await processFoodLog({ image: base64String });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Unified function to hit our API and save to Supabase
+  const processFoodLog = async (payload: { food?: string, image?: string }) => {
     setLoading(true);
-
     try {
-      // 1. Get AI estimation
-      const aiRes = await fetch('/api/estimate-food', {
-        method: 'POST', body: JSON.stringify({ food: foodInput })
+      const res = await fetch('/api/estimate-food', {
+        method: 'POST', 
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
       });
-      const aiData = await aiRes.json();
+      const aiData = await res.json();
 
-      // 2. Save to Supabase
+      if (aiData.error) throw new Error(aiData.error);
+
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data } = await supabase.from('nutrition_logs').insert({
@@ -48,9 +73,8 @@ export default function NutritionPage() {
         
         if (data) setLogs(prev => [...prev, data]);
       }
-      setFoodInput("");
     } catch (error) {
-      alert("Failed to log food");
+      alert("Failed to analyze food. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -80,18 +104,49 @@ export default function NutritionPage() {
       </div>
 
       {/* AI Food Logger */}
-      <div className="bg-slate-900/80 p-6 rounded-3xl border border-slate-700">
+      <div className="bg-slate-900/80 p-6 sm:p-8 rounded-3xl border border-slate-700 shadow-2xl relative overflow-hidden">
+        {loading && (
+          <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-10">
+            <div className="text-blue-400 font-bold animate-pulse flex items-center gap-2">
+              <span className="text-2xl">👀</span> AI is analyzing your food...
+            </div>
+          </div>
+        )}
+
         <h2 className="text-xl font-bold text-white mb-4">What did you eat today?</h2>
-        <form onSubmit={logFood} className="flex gap-4">
+        
+        <form onSubmit={logFoodText} className="flex gap-3">
           <input 
             type="text" 
             value={foodInput}
             onChange={(e) => setFoodInput(e.target.value)}
             placeholder="e.g., 7-11 chicken breast and rice"
-            className="flex-1 bg-slate-950/50 border border-slate-700 text-white rounded-xl p-4 outline-none focus:border-blue-500"
+            className="flex-1 bg-slate-950/50 border border-slate-700 text-white rounded-xl p-4 outline-none focus:border-blue-500 transition"
           />
-          <button disabled={loading} type="submit" className="bg-blue-600 hover:bg-blue-500 text-white px-8 rounded-xl font-bold transition disabled:opacity-50">
-            {loading ? 'Estimating...' : 'Log It'}
+          
+          {/* Hidden File Input */}
+          <input 
+            type="file" 
+            accept="image/*" 
+            capture="environment" // Opens camera on mobile natively
+            ref={fileInputRef}
+            onChange={handleImageCapture}
+            className="hidden"
+          />
+
+          {/* Camera Button */}
+          <button 
+            type="button" 
+            onClick={() => fileInputRef.current?.click()}
+            className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-5 rounded-xl border border-slate-700 transition flex items-center justify-center"
+            title="Snap a photo"
+          >
+            📸
+          </button>
+          
+          {/* Submit Text Button */}
+          <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white px-8 rounded-xl font-bold transition">
+            Log It
           </button>
         </form>
         
@@ -99,9 +154,9 @@ export default function NutritionPage() {
         {logs.length > 0 && (
           <div className="mt-6 space-y-2">
             {logs.map(log => (
-              <div key={log.id} className="flex justify-between items-center bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
-                <span className="text-slate-300 font-medium">{log.food_name}</span>
-                <span className="text-emerald-400 font-bold">{log.calories} kcal</span>
+              <div key={log.id} className="flex justify-between items-center bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
+                <span className="text-slate-200 font-medium">{log.food_name}</span>
+                <span className="text-emerald-400 font-bold bg-emerald-500/10 px-3 py-1 rounded-full">{log.calories} kcal</span>
               </div>
             ))}
           </div>
@@ -110,7 +165,7 @@ export default function NutritionPage() {
 
       {/* AI Suggested Menu */}
       <div>
-        <h2 className="text-2xl font-bold text-white mb-6">AI Suggested Menu (Thai Options)</h2>
+        <h2 className="text-2xl font-bold text-white mb-6">AI Suggested Menu</h2>
         <div className="grid md:grid-cols-3 gap-6">
           {meals.map((meal: any, i: number) => (
             <div key={i} className="bg-slate-900/30 border border-slate-800 rounded-2xl p-6 hover:bg-slate-900/60 transition">
@@ -121,7 +176,6 @@ export default function NutritionPage() {
           ))}
         </div>
       </div>
-
     </div>
   );
 }
