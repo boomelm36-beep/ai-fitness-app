@@ -43,7 +43,7 @@ ${overloadInstructions}
 ${isTired ? "USER IS TIRED TODAY: Adjust Day 1 for active recovery / mobility." : ""}
 
 STRICT CONSTRAINTS:
-1. Keep exercise descriptions and steps concise (max 2 short bullet steps per exercise) to ensure full JSON completion.
+1. Keep exercise descriptions concise (max 2 short bullet steps per exercise).
 2. Equipment: ONLY use listed equipment (${availableEquipment}).
 3. Diet: Strictly respect "${eatingStyle}" and DO NOT include forbidden items (${allergyList}).
 4. Weekly Routine: Provide 7 daily routines (Monday to Sunday).
@@ -103,7 +103,7 @@ Required JSON Schema:
           content: prompt
         }
       ],
-      model: "llama-3.1-70b-versatile",
+      model: "llama-3.1-8b-instant", // Active & supported Groq endpoint
       temperature: 0.3,
       max_completion_tokens: 4000,
       response_format: { type: "json_object" }
