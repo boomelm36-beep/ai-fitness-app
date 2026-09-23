@@ -47,7 +47,7 @@ export async function POST(req: Request) {
       }
     }`;
 
-    const chatCompletion = await groq.chat.completions.create({
+const chatCompletion = await groq.chat.completions.create({
       messages: [
         {
           role: "system",
@@ -58,9 +58,8 @@ export async function POST(req: Request) {
           content: prompt,
         }
       ],
-      model: "llama3-70b-8192",
+      model: "llama-3.3-70b-versatile", // <-- Update this line to the new model
       temperature: 0.5,
-      // This strict formatting prevents the UI-breaking bugs
       response_format: { type: "json_object" }, 
     });
 
