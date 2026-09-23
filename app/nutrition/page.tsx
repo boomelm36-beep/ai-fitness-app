@@ -31,8 +31,9 @@ export default function NutritionPage() {
   const [carbs, setCarbs] = useState("");
   const [fat, setFat] = useState("");
   const [isLogging, setIsLogging] = useState(false);
+  const [isEstimating, setIsEstimating] = useState(false);
 
-  // 1. Auth check and fetch today's logged meals
+  // Fetch today's logged meals
   useEffect(() => {
     const fetchTodayData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -58,7 +59,37 @@ export default function NutritionPage() {
     fetchTodayData();
   }, [router]);
 
-  // 2. Handlers for Meal Logging
+  // AI Estimate macro calculation via /api/estimate-food
+  const handleEstimateAI = async () => {
+    if (!foodName) {
+      alert("Please enter a food name first!");
+      return;
+    }
+
+    setIsEstimating(true);
+    try {
+      const res = await fetch("/api/estimate-food", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ food: foodName }),
+      });
+
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      if (data.foodName) setFoodName(data.foodName);
+      if (data.calories !== undefined) setCalories(data.calories.toString());
+      if (data.protein !== undefined) setProtein(data.protein.toString());
+      if (data.carbs !== undefined) setCarbs(data.carbs.toString());
+      if (data.fat !== undefined) setFat(data.fat.toString());
+    } catch (err: any) {
+      alert(`AI Estimation failed: ${err.message}`);
+    } finally {
+      setIsEstimating(false);
+    }
+  };
+
+  // Handlers for Meal Logging
   const handleLogMeal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!foodName || !calories) return;
@@ -108,7 +139,7 @@ export default function NutritionPage() {
     }
   };
 
-  // 3. Calculated Macro Totals
+  // Calculated Macro Totals
   const totalCalories = logs.reduce((sum, item) => sum + (item.calories || 0), 0);
   const totalProtein = logs.reduce((sum, item) => sum + (item.protein || 0), 0);
   const totalCarbs = logs.reduce((sum, item) => sum + (item.carbs || 0), 0);
@@ -139,7 +170,7 @@ export default function NutritionPage() {
         </Link>
       </div>
 
-      {/* Feature 2: "Scan My Fridge" Banner Shortcut */}
+      {/* "Scan My Fridge" Banner Shortcut */}
       <Link 
         href="/fridge" 
         className="group flex items-center justify-between bg-gradient-to-r from-purple-900/40 via-blue-900/40 to-slate-900/80 border border-purple-500/30 hover:border-purple-400/70 p-5 rounded-2xl shadow-lg transition duration-300"
@@ -248,14 +279,28 @@ export default function NutritionPage() {
           <form onSubmit={handleLogMeal} className="space-y-3">
             <div>
               <label className="block text-xs font-bold text-slate-400 mb-1">Food Name</label>
-              <input
-                type="text"
-                placeholder="e.g. Grilled Chicken Salad"
-                value={foodName}
-                onChange={(e) => setFoodName(e.target.value)}
-                className="w-full bg-slate-950/80 border border-slate-700 rounded-xl p-3 text-white text-sm outline-none focus:border-blue-500 transition"
-                required
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="e.g. Pad Krapow Gai with Fried Egg"
+                  value={foodName}
+                  onChange={(e) => setFoodName(e.target.value)}
+                  className="flex-1 bg-slate-950/80 border border-slate-700 rounded-xl p-3 text-white text-sm outline-none focus:border-blue-500 transition"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={handleEstimateAI}
+                  disabled={isEstimating || !foodName}
+                  className="bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 border border-purple-500/40 font-bold px-3 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+                >
+                  {isEstimating ? (
+                    <span className="animate-pulse">✨ Estimating...</span>
+                  ) : (
+                    <span>✨ AI Estimate</span>
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
