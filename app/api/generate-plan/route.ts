@@ -9,19 +9,29 @@ export async function POST(req: Request) {
     const { stats, isTired } = await req.json();
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
 
+    const availableEquipment = stats.equipment?.length > 0 
+      ? stats.equipment.join(", ") 
+      : "Bodyweight only (NO equipment, NO dumbbells, NO barbells, NO machines)";
+
     const prompt = `Act as an expert personal trainer and nutritionist. 
-    User: Age ${stats.age}, Weight ${stats.weight}kg, Goal: ${stats.goal}. 
-    Location: Thailand. Food Access: ${stats.foodAccess?.length > 0 ? stats.foodAccess.join(", ") : "Standard grocery"}.
+    User Stats: Age ${stats.age}, Weight ${stats.weight}kg, Height ${stats.height}cm, Goal: ${stats.goal}. 
+    EQUIPMENT AVAILABLE: ${availableEquipment}.
+    Swimming Pool Access: ${stats.swimmingPool ? "Yes" : "No"}.
+    Food Access (Thailand): ${stats.foodAccess?.length > 0 ? stats.foodAccess.join(", ") : "Standard local options"}.
 
-    CONSTRAINTS:
-    1. SCHEDULE: Today is ${today}. Make Saturday and Sunday rest/light recovery days.
-    2. NUTRITION: You MUST suggest localized Thai meals or specific items based on their Food Access (e.g., specific 7-11 Thailand items like chicken breast/boiled eggs, common street food like Pad Krapow Gai with less oil, or Grab delivery options).
-    3. INSTRUCTIONS: For every exercise, provide 3-4 steps and a youtube search phrase.
+    ${isTired ? "USER IS TIRED TODAY. Adjust today's routine for active recovery and light mobility/stretching." : ""}
+    
+    STRICT CONSTRAINTS:
+    1. EQUIPMENT RESTRICTION (CRITICAL): ONLY use exercises that can be performed strictly using the equipment listed in "EQUIPMENT AVAILABLE". If "Bodyweight only", do NOT include Dumbbells, Barbells, Kettlebells, or machines under any circumstances.
+    2. SCHEDULE: Today is ${today}. Generate a 7-day routine. Make Saturday and Sunday rest or light recovery days.
+    3. SWIMMING: If Swimming Pool Access is Yes, you MUST ONLY schedule swimming on Saturday or Sunday.
+    4. NUTRITION: Suggest realistic Thai options based on their Food Access (e.g. 7-11 Thailand items, Thai street food / made-to-order, Grab/LineMan delivery).
+    5. INSTRUCTIONS & VIDEO: For EVERY exercise, provide 3-4 clear step-by-step instructions and a concise YouTube search term (e.g. "Push ups proper form tutorial").
 
-    You MUST output a valid JSON object matching this exact structure:
+    Output ONLY valid JSON matching this exact structure:
     {
       "exercisePlan": {
-        "overview": "Short motivational overview based on their equipment and goal.",
+        "overview": "Short motivational summary tailored to their goal and available equipment.",
         "weeklyRoutine": [
           { 
             "day": "Monday", 
@@ -30,14 +40,14 @@ export async function POST(req: Request) {
             "intensity": "High", 
             "exercises": [
               { 
-                "name": "Dumbbell Press", 
-                "details": "3 sets of 10 reps", 
+                "name": "Push-Ups", 
+                "details": "3 sets of 12 reps", 
                 "steps": [
-                  "Lie back on a bench holding dumbbells at chest level.",
-                  "Press the weights upward until your arms are fully extended.",
-                  "Slowly lower the dumbbells back to the starting position."
+                  "Place hands slightly wider than shoulder width.",
+                  "Lower body until chest nearly touches floor.",
+                  "Push back up keeping core tight."
                 ],
-                "youtubeSearch": "Dumbbell Press proper form tutorial"
+                "youtubeSearch": "Push-Ups form tutorial"
               }
             ] 
           }
@@ -47,7 +57,7 @@ export async function POST(req: Request) {
         "dailyCalories": 2200,
         "macros": { "protein": 150, "carbs": 200, "fat": 65 },
         "meals": [
-          { "time": "Breakfast", "name": "Protein Oatmeal", "calories": 450, "desc": "Oats with whey." }
+          { "time": "Breakfast", "name": "7-11 Chicken Breast & Rice", "calories": 450, "desc": "Convenient high-protein meal." }
         ]
       }
     }`;
@@ -56,7 +66,7 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "system",
-          content: "You are a fitness and nutrition AI. You only output valid JSON. Do not include markdown tags like ```json or any other text.",
+          content: "You are a strict fitness AI. You strictly respect equipment limitations and output ONLY valid JSON without markdown wrapping.",
         },
         {
           role: "user",
@@ -64,7 +74,7 @@ export async function POST(req: Request) {
         }
       ],
       model: "openai/gpt-oss-120b",
-      temperature: 0.5,
+      temperature: 0.3,
       response_format: { type: "json_object" }, 
     });
 

@@ -52,35 +52,38 @@ export default function ExercisePage() {
             
             <div className="p-5 flex-1">
               <ul className="space-y-4">
-                {day.exercises.map((ex: any, idx: number) => (
-                  <li key={idx} className="bg-slate-950/50 p-4 rounded-xl border border-slate-800/50 hover:border-slate-600 transition flex flex-col gap-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="text-slate-200 font-bold text-base">{ex.name}</h4>
-                        <p className="text-blue-500 font-semibold text-xs mt-1">{ex.details}</p>
-                      </div>
-                      {ex.youtubeSearch && (
+                {day.exercises.map((ex: any, idx: number) => {
+                  const query = ex.youtubeSearch || `${ex.name} exercise tutorial`;
+                  const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+
+                  return (
+                    <li key={idx} className="bg-slate-950/50 p-4 rounded-xl border border-slate-800/50 hover:border-slate-600 transition flex flex-col gap-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="text-slate-200 font-bold text-base">{ex.name}</h4>
+                          <p className="text-blue-500 font-semibold text-xs mt-1">{ex.details}</p>
+                        </div>
                         <a 
-                          href={`[https://www.youtube.com/results?search_query=$](https://www.youtube.com/results?search_query=$){encodeURIComponent(ex.youtubeSearch)}`}
+                          href={youtubeUrl}
                           target="_blank"
-                          rel="noreferrer"
+                          rel="noopener noreferrer"
                           className="bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 flex-shrink-0"
                         >
                           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
                           Watch
                         </a>
+                      </div>
+                      
+                      {ex.steps && ex.steps.length > 0 && (
+                        <ol className="list-decimal list-outside ml-4 space-y-1.5 mt-1">
+                          {ex.steps.map((step: string, stepIdx: number) => (
+                            <li key={stepIdx} className="text-slate-400 text-sm leading-relaxed pr-2">{step}</li>
+                          ))}
+                        </ol>
                       )}
-                    </div>
-                    
-                    {ex.steps && ex.steps.length > 0 && (
-                      <ol className="list-decimal list-outside ml-4 space-y-1.5 mt-1">
-                        {ex.steps.map((step: string, stepIdx: number) => (
-                          <li key={stepIdx} className="text-slate-400 text-sm leading-relaxed pr-2">{step}</li>
-                        ))}
-                      </ol>
-                    )}
-                  </li>
-                ))}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           </div>
