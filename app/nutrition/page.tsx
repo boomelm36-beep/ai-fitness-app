@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAppStore } from "@/store";
 import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation"; // Add this import at the top
 
 export default function NutritionPage() {
   const { nutritionPlan } = useAppStore();
@@ -12,6 +13,27 @@ export default function NutritionPage() {
   const [loading, setLoading] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkAuthAndFetchData = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Kick user to login if no active session
+      if (!session) {
+        router.push("/auth");
+        return; 
+      }
+
+      // ... (Keep the rest of your existing fetchWeightHistory logic here)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      // ...
+    };
+    
+    checkAuthAndFetchData();
+  }, [router]);
 
   useEffect(() => {
     fetchDailyData();

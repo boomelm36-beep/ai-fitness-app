@@ -6,12 +6,12 @@ import { supabase } from "@/lib/supabase";
 import { useAppStore } from "@/store";
 
 export default function AuthPage() {
-  // Defaults to Login instead of Sign Up
   const [isSignUp, setIsSignUp] = useState(false);
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [username, setUsername] = useState(""); // Used for Sign Up only
+  const [username, setUsername] = useState(""); 
+  const [gender, setGender] = useState(""); // <-- New state for Gender
   const [loading, setLoading] = useState(false);
   
   const router = useRouter();
@@ -29,6 +29,12 @@ export default function AuthPage() {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isSignUp && !gender) {
+      alert("Please select your gender.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -37,16 +43,17 @@ export default function AuthPage() {
         const { data: authData, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
         
-        // Save the username to the profiles table
+        // Save the username AND gender to the profiles table
         if (authData.user) {
           await supabase.from('profiles').insert({
             id: authData.user.id,
-            username: username
+            username: username,
+            gender: gender
           });
         }
         
         alert("Account created successfully!");
-        router.push("/onboarding"); // Direct new users to set up their profile
+        router.push("/onboarding"); 
         
       } else {
         // --- LOG IN LOGIC ---
@@ -69,7 +76,8 @@ export default function AuthPage() {
               foodAccess: profile.food_access || [],
               eatingMethods: profile.eating_methods || ["Anything"],
               allergies: profile.allergies || [],
-              gender: profile.gender || ""
+              gender: profile.gender || "",
+              ifSchedule: profile.if_schedule || ""
             });
             // Load saved plans
             useAppStore.getState().setPlans(profile.exercise_plan || null, profile.nutrition_plan || null);
@@ -101,14 +109,34 @@ export default function AuthPage() {
         <form onSubmit={handleAuth} className="space-y-4">
           
           {isSignUp && (
-            <input 
-              type="text" 
-              placeholder="Username" 
-              value={username} 
-              onChange={(e) => setUsername(e.target.value)} 
-              className="w-full bg-slate-950/50 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-blue-500 transition"
-              required
-            />
+            <>
+              <input 
+                type="text" 
+                placeholder="Username" 
+                value={username} 
+                onChange={(e) => setUsername(e.target.value)} 
+                className="w-full bg-slate-950/50 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-blue-500 transition"
+                required
+              />
+              
+              {/* Gender Selection Toggle */}
+              <div className="flex gap-4">
+                {['Male', 'Female'].map(g => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setGender(g)}
+                    className={`flex-1 py-3 rounded-xl font-bold transition border ${
+                      gender === g 
+                        ? 'bg-blue-600 border-blue-500 text-white' 
+                        : 'bg-slate-950/50 border-slate-700 text-slate-400 hover:border-slate-500'
+                    }`}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
 
           <input 
@@ -141,7 +169,10 @@ export default function AuthPage() {
         <div className="mt-6 text-center">
           <button 
             type="button"
-            onClick={() => setIsSignUp(!isSignUp)} 
+            onClick={() => {
+              setIsSignUp(!isSignUp);
+              setGender(""); // Reset gender when toggling views
+            }} 
             className="text-slate-400 hover:text-white text-sm font-bold transition"
           >
             {isSignUp ? "Already have an account? Log In" : "Need an account? Sign Up"}

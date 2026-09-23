@@ -41,7 +41,7 @@ export default function Navbar() {
         {/* LEFT SECTION: Logo & Slogan */}
         <div className="flex flex-col">
           <Link href="/dashboard" className="flex items-center gap-2 text-xl font-black text-white tracking-tight hover:opacity-80 transition">
-            <span className="text-amber-500">⚡</span> AI Fit
+            <span className="text-amber-500">⚡</span> BOOM! AI FIT
           </Link>
           <span className="text-slate-400 text-[10px] mt-0.5 tracking-wide">
             Sore today, strong tomorrow.

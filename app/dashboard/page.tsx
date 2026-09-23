@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAppStore } from "@/store";
 import { supabase } from "@/lib/supabase";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useRouter } from "next/navigation"; // Add this import at the top
 
 export default function DashboardPage() {
   const { userStats, exercisePlan, setUserStats, setPlans } = useAppStore();
@@ -26,6 +27,27 @@ export default function DashboardPage() {
   let bmiGrade = "";
   let bmiColor = "text-slate-400";
   const numericBMI = parseFloat(currentBMI);
+
+  const router = useRouter();
+
+  useEffect(() => {
+  const checkAuthAndFetchData = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    // Kick user to login if no active session
+    if (!session) {
+      router.push("/auth");
+      return; 
+    }
+
+    // ... (Keep the rest of your existing fetchWeightHistory logic here)
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    // ...
+  };
+  
+  checkAuthAndFetchData();
+}, [currentWeight, heightInMeters, currentBMI, router]);
 
   if (!isNaN(numericBMI)) {
     if (numericBMI < 18.5) { bmiGrade = "Underweight"; bmiColor = "text-blue-400"; }

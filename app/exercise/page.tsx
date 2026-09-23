@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAppStore } from '@/store';
 import { supabase } from '@/lib/supabase';
+import { useRouter } from "next/navigation";
 
 export default function ExercisePage() {
   const { exercisePlan, userStats, setPlans } = useAppStore();
@@ -16,6 +17,27 @@ export default function ExercisePage() {
   ]);
   const [restTimer, setRestTimer] = useState(0);
   const [completedExercises, setCompletedExercises] = useState<any[]>([]);
+
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkAuthAndFetchData = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Kick user to login if no active session
+      if (!session) {
+        router.push("/auth");
+        return; 
+      }
+
+      // ... (Keep the rest of your existing fetchWeightHistory logic here)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      // ...
+    };
+    
+    checkAuthAndFetchData();
+  }, [router]);
 
   // Rest Timer countdown
   useEffect(() => {
