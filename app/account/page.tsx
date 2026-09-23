@@ -43,55 +43,55 @@ export default function AccountPage() {
     setLoading(false);
   };
 
-  // 1. Add this helper function inside your AccountPage component
-const urlBase64ToUint8Array = (base64String: string) => {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-};
+  // Push Notification Helpers
+  const urlBase64ToUint8Array = (base64String: string) => {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  };
 
-const subscribeToNotifications = async () => {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    alert("Push notifications are not supported in this browser.");
-    return;
-  }
-
-  try {
-    const registration = await navigator.serviceWorker.ready;
-    const existingSub = await registration.pushManager.getSubscription();
-    
-    if (existingSub) {
-      alert("Notifications are already enabled!");
+  const subscribeToNotifications = async () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      alert("Push notifications are not supported in this browser.");
       return;
     }
 
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!)
-    });
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const existingSub = await registration.pushManager.getSubscription();
+      
+      if (existingSub) {
+        alert("Notifications are already enabled!");
+        return;
+      }
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscription, userId: user.id })
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!)
       });
-      alert("Notifications successfully enabled! 🔔");
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await fetch('/api/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subscription, userId: user.id })
+        });
+        alert("Notifications successfully enabled! 🔔");
+      }
+    } catch (error) {
+      console.error("Subscription failed:", error);
+      alert("Failed to enable notifications. Make sure you granted browser permissions.");
     }
-  } catch (error) {
-    console.error("Subscription failed:", error);
-    alert("Failed to enable notifications. Make sure you granted browser permissions.");
-  }
-};
+  };
 
   return (
-    <div className="max-w-xl mx-auto mt-10 animate-in fade-in duration-500">
+    <div className="max-w-xl mx-auto mt-10 animate-in fade-in duration-500 px-4 sm:px-0">
       <div className="bg-slate-900/80 p-8 rounded-3xl border border-slate-800 shadow-xl">
         <h1 className="text-3xl font-extrabold text-white mb-6">My Account</h1>
         
@@ -121,19 +121,24 @@ const subscribeToNotifications = async () => {
                 </button>
               ))}
             </div>
-            // 2. Add this button to your JSX (e.g., below the Gender selection):
-            <button 
+          </div>
+
+          <button 
+            onClick={handleSave} 
+            disabled={loading} 
+            className="w-full bg-blue-600 text-white font-bold p-4 rounded-xl hover:bg-blue-500 transition shadow-lg shadow-blue-900/50 disabled:opacity-50"
+          >
+            {loading ? "Saving..." : "Save Changes"}
+          </button>
+
+          <hr className="border-slate-800 my-6" />
+
+          <button 
             onClick={subscribeToNotifications} 
             type="button"
             className="w-full bg-slate-800 text-slate-200 font-bold p-4 rounded-xl hover:bg-slate-700 transition border border-slate-700 flex items-center justify-center gap-2"
-            >
+          >
             <span>🔔</span> Enable Push Notifications
-            </button>
-          </div>
-          
-
-          <button onClick={handleSave} disabled={loading} className="w-full bg-blue-600 text-white font-bold p-4 rounded-xl hover:bg-blue-500 transition shadow-lg shadow-blue-900/50">
-            {loading ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </div>
