@@ -1,60 +1,39 @@
 // app/auth/page.tsx
 "use client";
-import { useState, useEffect } from "react"; // <-- Add useEffect here
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useAppStore } from "@/store";
 
 export default function AuthPage() {
+  // Defaults to Login instead of Sign Up
   const [isSignUp, setIsSignUp] = useState(false);
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [username, setUsername] = useState("");
-  const [error, setError] = useState("");
+  const [username, setUsername] = useState(""); // Used for Sign Up only
   const [loading, setLoading] = useState(false);
+  
   const router = useRouter();
 
+  // If already logged in, redirect to dashboard
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) router.push("/dashboard");
-    });
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        router.push("/dashboard");
+      }
+    };
+    checkUser();
   }, [router]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
 
-    if (isSignUp) {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (signUpError) {
-        setError(signUpError.message);
-        setLoading(false);
-        return;
-      }
-
-      if (data.user) {
-        await supabase.from("profiles").insert([
-          { id: data.user.id, username: username }
-        ]);
-        router.push("/onboarding");
-      }
-    } else {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (signInError) {
-        setError(signInError.message);
-        setLoading(false);
-        return;
-      }
-
+    try {
       if (isSignUp) {
+        // --- SIGN UP LOGIC ---
         const { data: authData, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
         
@@ -65,91 +44,110 @@ export default function AuthPage() {
             username: username
           });
         }
+        
+        alert("Account created successfully!");
+        router.push("/onboarding"); // Direct new users to set up their profile
+        
+      } else {
+        // --- LOG IN LOGIC ---
+        const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        
+        // Hydrate global state across devices
+        if (authData.user) {
+          const { data: profile } = await supabase.from('profiles').select('*').eq('id', authData.user.id).single();
+          
+          if (profile) {
+            useAppStore.getState().setUsername(profile.username || "");
+            useAppStore.getState().setUserStats({
+              age: profile.age?.toString() || "",
+              weight: profile.weight?.toString() || "",
+              height: profile.height?.toString() || "",
+              goal: profile.goal || "",
+              equipment: profile.equipment || [],
+              swimmingPool: profile.swimming_pool || false,
+              foodAccess: profile.food_access || [],
+              eatingMethods: profile.eating_methods || ["Anything"],
+              allergies: profile.allergies || [],
+              gender: profile.gender || ""
+            });
+            // Load saved plans
+            useAppStore.getState().setPlans(profile.exercise_plan || null, profile.nutrition_plan || null);
+          }
+        }
+        
+        router.push("/dashboard");
       }
-
-      router.push("/dashboard");
+    } catch (error: any) {
+      alert(error.message || "An error occurred during authentication.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const inputClass = "w-full bg-slate-950/50 border border-slate-700 text-white placeholder:text-slate-500 rounded-xl p-4 focus:ring-2 focus:ring-blue-500 outline-none transition mb-4";
-
   return (
-    <div className="min-h-[80vh] flex items-center justify-center animate-in fade-in zoom-in-95 duration-500">
-      <div className="bg-slate-900/80 backdrop-blur-xl p-8 sm:p-10 rounded-3xl border border-slate-800 shadow-2xl w-full max-w-md">
+    <div className="min-h-[85vh] flex items-center justify-center animate-in fade-in duration-500">
+      <div className="bg-slate-900/80 p-8 sm:p-10 rounded-3xl border border-slate-800 shadow-2xl w-full max-w-md">
+        
         <div className="text-center mb-8">
           <h1 className="text-3xl font-extrabold text-white mb-2">
             {isSignUp ? "Create an Account" : "Welcome Back"}
           </h1>
           <p className="text-slate-400 text-sm">
-            {isSignUp ? "Start your AI-powered fitness journey." : "Log in to view your tailored plans."}
+            {isSignUp ? "Start your AI fitness journey today." : "Log in to view your tailored plans."}
           </p>
         </div>
 
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl mb-6 text-sm">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleAuth}>
-          {isSignUp && (
-            <input
-              type="text"
-              placeholder="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              className={inputClass}
-            />
-          )}
+        <form onSubmit={handleAuth} className="space-y-4">
+          
           {isSignUp && (
             <input 
               type="text" 
               placeholder="Username" 
               value={username} 
               onChange={(e) => setUsername(e.target.value)} 
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-white mb-4 outline-none focus:border-blue-500"
+              className="w-full bg-slate-950/50 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-blue-500 transition"
               required
             />
           )}
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+
+          <input 
+            type="email" 
+            placeholder="Email" 
+            value={email} 
+            onChange={(e) => setEmail(e.target.value)} 
+            className="w-full bg-slate-950/50 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-blue-500 transition"
             required
-            className={inputClass}
           />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+          
+          <input 
+            type="password" 
+            placeholder="Password" 
+            value={password} 
+            onChange={(e) => setPassword(e.target.value)} 
+            className="w-full bg-slate-950/50 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-blue-500 transition"
             required
-            className={inputClass}
           />
 
-          <button
-            type="submit"
+          <button 
+            type="submit" 
             disabled={loading}
-            className="w-full mt-2 bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg shadow-blue-900/50 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            className="w-full bg-blue-600 text-white font-bold p-4 rounded-xl hover:bg-blue-500 transition shadow-lg shadow-blue-900/50 disabled:opacity-50 mt-2"
           >
-            {loading ? "Processing..." : isSignUp ? "Sign Up" : "Log In"}
+            {loading ? "Please wait..." : (isSignUp ? "Sign Up" : "Log In")}
           </button>
         </form>
 
-        <p className="mt-8 text-sm text-center text-slate-400">
-          {isSignUp ? "Already have an account?" : "Need an account?"}{" "}
-          <button
-            onClick={() => {
-              setIsSignUp(!isSignUp);
-              setError("");
-            }}
-            className="text-blue-400 hover:text-blue-300 font-semibold transition"
+        <div className="mt-6 text-center">
+          <button 
+            type="button"
+            onClick={() => setIsSignUp(!isSignUp)} 
+            className="text-slate-400 hover:text-white text-sm font-bold transition"
           >
-            {isSignUp ? "Log In" : "Sign Up"}
+            {isSignUp ? "Already have an account? Log In" : "Need an account? Sign Up"}
           </button>
-        </p>
+        </div>
+
       </div>
     </div>
   );

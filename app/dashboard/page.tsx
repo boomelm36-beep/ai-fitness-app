@@ -10,15 +10,18 @@ export default function DashboardPage() {
   const { userStats, exercisePlan, setUserStats, setPlans } = useAppStore();
   const [chartData, setChartData] = useState<any[]>([]);
   
-  // --- Check-In States ---
+  // Check-In States
   const [newWeight, setNewWeight] = useState(userStats?.weight || "");
   const [feedback, setFeedback] = useState("Perfect");
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [checkInComplete, setCheckInComplete] = useState(false);
 
+  // Calculate current BMI
   const heightInMeters = parseFloat(userStats?.height || "0") / 100;
   const currentWeight = parseFloat(userStats?.weight || "0");
-  const currentBMI = heightInMeters > 0 && currentWeight > 0 ? (currentWeight / (heightInMeters * heightInMeters)).toFixed(1) : "--";
+  const currentBMI = heightInMeters > 0 && currentWeight > 0 
+    ? (currentWeight / (heightInMeters * heightInMeters)).toFixed(1) 
+    : "--";
 
   let bmiGrade = "";
   let bmiColor = "text-slate-400";
@@ -58,11 +61,9 @@ export default function DashboardPage() {
         }]);
       }
     };
-
     fetchWeightHistory();
   }, [currentWeight, heightInMeters, currentBMI]);
 
-  // --- NEW: Handle Check In ---
   const handleCheckIn = async () => {
     setIsCheckingIn(true);
     try {
@@ -87,7 +88,13 @@ export default function DashboardPage() {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
+      // 4. Save to state and cloud (so it syncs to other devices)
       setPlans(data.exercisePlan, data.nutritionPlan);
+      await supabase.from('profiles').update({
+        exercise_plan: data.exercisePlan,
+        nutrition_plan: data.nutritionPlan
+      }).eq('id', user.id);
+
       setCheckInComplete(true);
       setTimeout(() => setCheckInComplete(false), 5000); // Hide success message after 5s
 
@@ -100,19 +107,17 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-white">Your Dashboard</h1>
           <p className="text-slate-400 mt-2">Track your progress and AI protocol.</p>
         </div>
-        <Link 
-          href="/onboarding" 
-          className="bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white px-5 py-2.5 rounded-xl text-sm font-bold border border-slate-700 transition flex items-center justify-center"
-        >
+        <Link href="/onboarding" className="bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white px-5 py-2.5 rounded-xl text-sm font-bold border border-slate-700 transition flex items-center justify-center">
           ⚙️ Edit Profile & Goals
         </Link>
       </header>
 
+      {/* Weekly Check-In Card */}
       <div className="bg-gradient-to-r from-blue-900/40 to-emerald-900/40 p-6 rounded-2xl border border-blue-500/30 shadow-lg">
         <h2 className="text-xl font-bold text-white mb-4">🗓️ Weekly Check-In</h2>
         
@@ -137,14 +142,14 @@ export default function DashboardPage() {
             </div>
             
             <button onClick={handleCheckIn} disabled={isCheckingIn} className="w-full md:w-1/3 bg-blue-600 hover:bg-blue-500 text-white font-bold p-3 rounded-xl transition disabled:opacity-50">
-              {isCheckingIn ? 'Recalculating Protocol...' : 'Update & Generate AI Plan'}
+              {isCheckingIn ? 'Recalculating...' : 'Update & Generate AI Plan'}
             </button>
           </div>
         )}
       </div>
 
       {/* User Stats Grid */}
-     <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {[
           { label: "Goal", value: userStats?.goal || "Not set", color: "text-blue-400" },
           { label: "Weight", value: currentWeight ? `${currentWeight} kg` : "--", color: "text-white" },
@@ -162,7 +167,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Progress Charts (Keep existing chart code below...) */}
+      {/* Progress Charts */}
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800 shadow-sm h-80 flex flex-col">
           <h2 className="text-lg font-bold text-white mb-4">Weight Tracking (kg)</h2>
@@ -195,7 +200,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Quick Actions (Keep existing action buttons below...) */}
+      {/* Quick Actions */}
       <div className="grid sm:grid-cols-2 gap-6">
         <Link href="/exercise" className="group block bg-gradient-to-br from-blue-600 to-blue-800 text-white p-8 rounded-2xl shadow-lg shadow-blue-900/20 hover:scale-[1.02] transition-transform">
           <h2 className="text-2xl font-bold mb-2">Exercise Protocol</h2>

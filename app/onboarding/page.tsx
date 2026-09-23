@@ -7,7 +7,7 @@ import { useAppStore } from "@/store";
 
 const EQUIPMENT_OPTIONS = ["Treadmill", "Dumbbell", "Kettlebell", "Barbell", "Resistance Bands", "Pull-up Bar"];
 const FOOD_OPTIONS = ["7-11 (Convenience Store)", "Street Food / Made-to-order", "Food Delivery (Grab/Line Man)", "Home Cooking"];
-const EATING_METHODS = ["Anything", "Ketogenic", "Low carb", "Carnivore Diet", "High Protein", "Intermittent Fasting", "Vegetarian", "Vegan"];
+const EATING_METHODS = ["Anything", "Ketogenic", "Low carb", "Carnivore Diet", "High Protein", "Intermittent Fasting"];
 const ALLERGY_OPTIONS = ["Peanuts", "Seafood", "Shellfish", "Dairy", "Gluten", "Pork", "Eggs", "Soy", "Beef", "Vegetables"];
 
 export default function Onboarding() {
@@ -20,7 +20,8 @@ export default function Onboarding() {
     swimmingPool: false,
     foodAccess: [] as string[],
     eatingMethods: ["Anything"] as string[],
-    allergies: [] as string[]
+    allergies: [] as string[],
+    gender: "" // Fetched from DB so we don't accidentally overwrite it
   });
   
   const [loading, setLoading] = useState(false);
@@ -43,7 +44,8 @@ export default function Onboarding() {
             swimmingPool: data.swimming_pool || false,
             foodAccess: data.food_access || [],
             eatingMethods: data.eating_methods?.length ? data.eating_methods : ["Anything"],
-            allergies: data.allergies || []
+            allergies: data.allergies || [],
+            gender: data.gender || ""
           });
         }
       }
@@ -90,6 +92,7 @@ export default function Onboarding() {
         return;
       }
 
+      // 1. Update Profile in Supabase
       const { error: dbError } = await supabase.from("profiles").upsert({
         id: user.id,
         age: parseFloat(stats.age),
@@ -105,9 +108,9 @@ export default function Onboarding() {
       });
 
       if (dbError) throw dbError;
-
       setUserStats(stats);
 
+      // 2. Generate Plan with AI
       const res = await fetch("/api/generate-plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -117,7 +120,14 @@ export default function Onboarding() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Failed to generate plan');
 
+      // 3. Save plans to state and upload to Supabase for cloud sync
       setPlans(data.exercisePlan, data.nutritionPlan);
+      
+      await supabase.from('profiles').update({
+        exercise_plan: data.exercisePlan,
+        nutrition_plan: data.nutritionPlan
+      }).eq('id', user.id);
+
       router.push("/dashboard");
 
     } catch (error: any) {
@@ -129,7 +139,7 @@ export default function Onboarding() {
 
   const inputClass = "w-full bg-slate-950/50 border border-slate-700 text-white placeholder:text-slate-500 rounded-xl p-4 focus:ring-2 focus:ring-blue-500 outline-none transition mb-4";
 
-  if (fetching) return <div className="min-h-screen flex items-center justify-center text-white">Loading profile...</div>;
+  if (fetching) return <div className="min-h-[80vh] flex items-center justify-center text-white">Loading profile...</div>;
 
   return (
     <div className="min-h-[90vh] flex items-center justify-center py-10">
