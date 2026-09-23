@@ -103,7 +103,7 @@ Required JSON Schema:
           content: prompt
         }
       ],
-      model: "llama-3.1-8b-instant", // Active & supported Groq endpoint
+      model: "llama3-8b-8192", // Active & supported Groq endpoint
       temperature: 0.3,
       max_completion_tokens: 4000,
       response_format: { type: "json_object" }
