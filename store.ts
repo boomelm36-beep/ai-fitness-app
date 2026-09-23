@@ -9,6 +9,7 @@ interface UserStats {
   age: string;
   equipment: string[];
   swimmingPool: boolean;
+  foodAccess: string[]; // <-- New field
 }
 
 interface AppState {

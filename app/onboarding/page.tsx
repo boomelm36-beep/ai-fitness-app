@@ -6,10 +6,11 @@ import { supabase } from "@/lib/supabase";
 import { useAppStore } from "@/store";
 
 const EQUIPMENT_OPTIONS = ["Treadmill", "Dumbbell", "Kettlebell", "Barbell", "Resistance Bands", "Pull-up Bar"];
+const FOOD_OPTIONS = ["7-11 (Convenience Store)", "Street Food / Made-to-order", "Food Delivery (Grab/Line Man)", "Home Cooking"];
 
 export default function Onboarding() {
   const [stats, setStats] = useState({ 
-    age: "", weight: "", height: "", goal: "", equipment: [] as string[], swimmingPool: false 
+    age: "", weight: "", height: "", goal: "", equipment: [] as string[], swimmingPool: false, foodAccess: [] as string[] 
   });
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -30,6 +31,7 @@ export default function Onboarding() {
             goal: data.goal || "",
             equipment: data.equipment || [],
             swimmingPool: data.swimming_pool || false,
+            foodAccess: data.food_access || [],
           });
         }
       }
@@ -46,6 +48,15 @@ export default function Onboarding() {
         : [...prev.equipment, item]
     }));
   };
+
+  const toggleFood = (item: string) => {
+  setStats(prev => ({
+    ...prev,
+    foodAccess: prev.foodAccess.includes(item) 
+      ? prev.foodAccess.filter(e => e !== item)
+      : [...prev.foodAccess, item]
+  }));
+};
 
   const handleSaveAndGenerate = async () => {
     try {
@@ -66,6 +77,7 @@ export default function Onboarding() {
         goal: stats.goal,
         equipment: stats.equipment,
         swimming_pool: stats.swimmingPool,
+        food_access: stats.foodAccess,
         updated_at: new Date().toISOString(),
       });
 
@@ -138,6 +150,23 @@ export default function Onboarding() {
           >
             <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform ${stats.swimmingPool ? 'translate-x-6' : 'translate-x-0'}`}></div>
           </button>
+        </div>
+        <div className="mb-6">
+          <label className="block text-white font-medium mb-3">Food Access (Thailand)</label>
+          <div className="flex flex-wrap gap-2">
+            {FOOD_OPTIONS.map(item => (
+              <button
+                key={item} onClick={() => toggleFood(item)}
+                className={`px-4 py-2 rounded-full text-sm font-medium border transition ${
+                  stats.foodAccess.includes(item) 
+                    ? 'bg-emerald-600 border-emerald-500 text-white' 
+                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'
+                }`}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
         </div>
 
         <button

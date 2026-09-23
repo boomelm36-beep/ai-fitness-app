@@ -10,17 +10,13 @@ export async function POST(req: Request) {
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
 
     const prompt = `Act as an expert personal trainer and nutritionist. 
-    User: Age ${stats.age}, Weight ${stats.weight}kg, Height ${stats.height}cm, Goal: ${stats.goal}. 
-    Equipment Available: ${stats.equipment?.length > 0 ? stats.equipment.join(", ") : "Bodyweight only"}.
-    Swimming Pool Access: ${stats.swimmingPool ? "Yes" : "No"}.
+    User: Age ${stats.age}, Weight ${stats.weight}kg, Goal: ${stats.goal}. 
+    Location: Thailand. Food Access: ${stats.foodAccess?.length > 0 ? stats.foodAccess.join(", ") : "Standard grocery"}.
 
-    ${isTired ? "USER IS TIRED TODAY. Adjust today's routine for active recovery and lower calories." : ""}
-    
     CONSTRAINTS:
-    1. SCHEDULE: Today is ${today}. Generate a 7-day schedule. Make Saturday and Sunday rest or light recovery days.
-    2. SWIMMING: If Swimming Pool Access is Yes, you MUST ONLY schedule swimming activities on Saturday or Sunday. Do not schedule swimming on weekdays.
-    3. NUTRITION: Meals must be very easy to find and easy to prepare.
-    4. IMAGES: For every exercise, provide a short 3-5 word descriptive prompt showing a person doing the movement.
+    1. SCHEDULE: Today is ${today}. Make Saturday and Sunday rest/light recovery days.
+    2. NUTRITION: You MUST suggest localized Thai meals or specific items based on their Food Access (e.g., specific 7-11 Thailand items like chicken breast/boiled eggs, common street food like Pad Krapow Gai with less oil, or Grab delivery options).
+    3. INSTRUCTIONS: For every exercise, provide 3-4 steps and a youtube search phrase.
 
     You MUST output a valid JSON object matching this exact structure:
     {
@@ -33,7 +29,16 @@ export async function POST(req: Request) {
             "duration": "45 mins", 
             "intensity": "High", 
             "exercises": [
-              { "name": "Dumbbell Press", "details": "3 sets of 10 reps", "imagePrompt": "person doing dumbbell chest press" }
+              { 
+                "name": "Dumbbell Press", 
+                "details": "3 sets of 10 reps", 
+                "steps": [
+                  "Lie back on a bench holding dumbbells at chest level.",
+                  "Press the weights upward until your arms are fully extended.",
+                  "Slowly lower the dumbbells back to the starting position."
+                ],
+                "youtubeSearch": "Dumbbell Press proper form tutorial"
+              }
             ] 
           }
         ]
@@ -47,7 +52,7 @@ export async function POST(req: Request) {
       }
     }`;
 
-const chatCompletion = await groq.chat.completions.create({
+    const chatCompletion = await groq.chat.completions.create({
       messages: [
         {
           role: "system",
@@ -58,7 +63,7 @@ const chatCompletion = await groq.chat.completions.create({
           content: prompt,
         }
       ],
-      model: "openai/gpt-oss-120b", // <-- Update this line to the new model
+      model: "openai/gpt-oss-120b",
       temperature: 0.5,
       response_format: { type: "json_object" }, 
     });
