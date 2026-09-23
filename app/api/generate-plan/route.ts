@@ -103,9 +103,9 @@ Required JSON Schema:
           content: prompt
         }
       ],
-      model: "llama3-8b-8192", // Active & supported Groq endpoint
+      model: "mixtral-8x7b-32768", // Non-Llama model (Mistral AI)
       temperature: 0.3,
-      max_completion_tokens: 4000,
+      max_tokens: 4000,
       response_format: { type: "json_object" }
     });
 
