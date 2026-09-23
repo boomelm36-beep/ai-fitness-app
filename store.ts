@@ -12,7 +12,8 @@ interface UserStats {
   foodAccess: string[];
   eatingMethods: string[];
   allergies: string[];
-  gender: string; // <-- New
+  gender: string;
+  ifSchedule?: string; // <-- New field for Intermittent Fasting
 }
 
 interface AppState {

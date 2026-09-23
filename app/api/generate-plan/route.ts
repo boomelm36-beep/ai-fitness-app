@@ -16,6 +16,11 @@ export async function POST(req: Request) {
     const eatingStyle = stats.eatingMethods?.length > 0 ? stats.eatingMethods.join(", ") : "Anything / Standard";
     const allergyList = stats.allergies?.length > 0 ? stats.allergies.join(", ") : "None";
 
+    // --- NEW: Add IF Context ---
+    const ifContext = stats.eatingMethods?.includes("Intermittent Fasting") && stats.ifSchedule
+      ? `USER PRACTICES INTERMITTENT FASTING. Eating window: ${stats.ifSchedule}. ALL scheduled meals MUST strictly fall within this specific time period.`
+      : "";
+
     // Progressive Overload Logic
     let overloadInstructions = "";
     if (feedback === "Too Easy") {
@@ -33,12 +38,13 @@ export async function POST(req: Request) {
     Food Access: ${stats.foodAccess?.length > 0 ? stats.foodAccess.join(", ") : "Standard options"}.
     DIETARY STYLE: ${eatingStyle}. ALLERGIES: ${allergyList}.
 
+    ${ifContext}
     ${overloadInstructions}
     ${isTired ? "USER IS TIRED TODAY. Adjust today's routine for active recovery and light mobility." : ""}
     
     STRICT CONSTRAINTS:
     1. EQUIPMENT: ONLY use listed equipment. No dumbbells/barbells if "Bodyweight only".
-    2. DIET: Strictly follow "${eatingStyle}" and DO NOT include: ${allergyList}.
+    2. DIET: Strictly follow "${eatingStyle}" and DO NOT include: ${allergyList}.${ifContext ? "Strictly respect the Intermittent Fasting eating window." : ""}
     3. SCHEDULE (CRITICAL): Generate a full 7-day routine. You MUST include exactly 7 objects in the "weeklyRoutine" array (Monday to Sunday).
     4. NUTRITION (CRITICAL): Provide at least 3-4 meals. Adjust calories based on their new weight of ${stats.weight}kg and goal.
     5. INSTRUCTIONS: Provide 3-4 steps and a YouTube search term for each exercise.

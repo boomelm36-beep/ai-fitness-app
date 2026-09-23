@@ -7,7 +7,7 @@ import { useAppStore } from "@/store";
 
 const EQUIPMENT_OPTIONS = ["Treadmill", "Dumbbell", "Kettlebell", "Barbell", "Resistance Bands", "Pull-up Bar"];
 const FOOD_OPTIONS = ["7-11 (Convenience Store)", "Street Food / Made-to-order", "Food Delivery (Grab/Line Man)", "Home Cooking"];
-const EATING_METHODS = ["Anything", "Ketogenic", "Low carb", "Carnivore Diet", "High Protein", "Intermittent Fasting"];
+const EATING_METHODS = ["Anything", "Ketogenic", "Low carb", "Carnivore Diet", "High Protein", "Intermittent Fasting", "Vegetarian", "Vegan", "Plant-based", "Whole30", "Paleo"];
 const ALLERGY_OPTIONS = ["Peanuts", "Seafood", "Shellfish", "Dairy", "Gluten", "Pork", "Eggs", "Soy", "Beef", "Vegetables"];
 
 export default function Onboarding() {
@@ -21,7 +21,8 @@ export default function Onboarding() {
     foodAccess: [] as string[],
     eatingMethods: ["Anything"] as string[],
     allergies: [] as string[],
-    gender: "" // Fetched from DB so we don't accidentally overwrite it
+    gender: "", // Fetched from DB so we don't accidentally overwrite it
+    ifSchedule: "" // <-- Add this
   });
   
   const [loading, setLoading] = useState(false);
@@ -45,7 +46,8 @@ export default function Onboarding() {
             foodAccess: data.food_access || [],
             eatingMethods: data.eating_methods?.length ? data.eating_methods : ["Anything"],
             allergies: data.allergies || [],
-            gender: data.gender || ""
+            gender: data.gender || "",
+            ifSchedule: data.if_schedule || "" // <-- Add this
           });
         }
       }
@@ -104,6 +106,7 @@ export default function Onboarding() {
         food_access: stats.foodAccess,
         eating_methods: stats.eatingMethods,
         allergies: stats.allergies,
+        if_schedule: stats.ifSchedule, // <-- Add this
         updated_at: new Date().toISOString(),
       });
 
@@ -195,7 +198,7 @@ export default function Onboarding() {
         {/* Eating Method / Dietary Style */}
         <div className="mb-6">
           <label className="block text-white font-medium mb-3">Eating Method / Dietary Preference</label>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 mb-4">
             {EATING_METHODS.map(item => (
               <button
                 key={item} type="button" onClick={() => toggleEatingMethod(item)}
@@ -209,6 +212,20 @@ export default function Onboarding() {
               </button>
             ))}
           </div>
+
+          {/* Conditional Intermittent Fasting Input */}
+          {stats.eatingMethods.includes("Intermittent Fasting") && (
+            <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700 animate-in zoom-in-95 duration-300">
+              <label className="block text-slate-300 text-sm font-bold mb-2">Eating Window (Intermittent Fasting)</label>
+              <input
+                type="text"
+                placeholder="e.g., 16:8 (Eat from 12:00 PM to 8:00 PM)"
+                value={stats.ifSchedule}
+                onChange={(e) => setStats({ ...stats, ifSchedule: e.target.value })}
+                className="w-full bg-slate-950/50 border border-slate-700 text-white rounded-xl p-3 outline-none focus:border-purple-500 transition"
+              />
+            </div>
+          )}
         </div>
 
         {/* Allergies / Excluded Foods */}
