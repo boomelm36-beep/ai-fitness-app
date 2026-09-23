@@ -7,35 +7,28 @@ import { supabase } from "@/lib/supabase";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function DashboardPage() {
-  const { userStats, exercisePlan } = useAppStore();
+  const { userStats, exercisePlan, setUserStats, setPlans } = useAppStore();
   const [chartData, setChartData] = useState<any[]>([]);
+  
+  // --- Check-In States ---
+  const [newWeight, setNewWeight] = useState(userStats?.weight || "");
+  const [feedback, setFeedback] = useState("Perfect");
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [checkInComplete, setCheckInComplete] = useState(false);
 
-  // Calculate current BMI
   const heightInMeters = parseFloat(userStats?.height || "0") / 100;
   const currentWeight = parseFloat(userStats?.weight || "0");
-  const currentBMI = heightInMeters > 0 && currentWeight > 0 
-    ? (currentWeight / (heightInMeters * heightInMeters)).toFixed(1) 
-    : "--";
+  const currentBMI = heightInMeters > 0 && currentWeight > 0 ? (currentWeight / (heightInMeters * heightInMeters)).toFixed(1) : "--";
 
-  // --- NEW: Calculate BMI Grade and dynamic styling ---
   let bmiGrade = "";
   let bmiColor = "text-slate-400";
   const numericBMI = parseFloat(currentBMI);
 
   if (!isNaN(numericBMI)) {
-    if (numericBMI < 18.5) {
-      bmiGrade = "Underweight";
-      bmiColor = "text-blue-400";
-    } else if (numericBMI < 25) {
-      bmiGrade = "Normal Weight";
-      bmiColor = "text-emerald-400";
-    } else if (numericBMI < 30) {
-      bmiGrade = "Overweight";
-      bmiColor = "text-orange-400";
-    } else {
-      bmiGrade = "Obese";
-      bmiColor = "text-red-500";
-    }
+    if (numericBMI < 18.5) { bmiGrade = "Underweight"; bmiColor = "text-blue-400"; }
+    else if (numericBMI < 25) { bmiGrade = "Normal Weight"; bmiColor = "text-emerald-400"; }
+    else if (numericBMI < 30) { bmiGrade = "Overweight"; bmiColor = "text-orange-400"; }
+    else { bmiGrade = "Obese"; bmiColor = "text-red-500"; }
   }
 
   // Fetch weight history and calculate historical BMI for the charts
@@ -69,6 +62,42 @@ export default function DashboardPage() {
     fetchWeightHistory();
   }, [currentWeight, heightInMeters, currentBMI]);
 
+  // --- NEW: Handle Check In ---
+  const handleCheckIn = async () => {
+    setIsCheckingIn(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not logged in");
+
+      // 1. Update weight in profile and logs
+      await supabase.from('profiles').update({ weight: parseFloat(newWeight) }).eq('id', user.id);
+      await supabase.from('weight_logs').insert({ user_id: user.id, weight: parseFloat(newWeight) });
+
+      // 2. Update local store
+      const updatedStats = { ...userStats, weight: newWeight } as any;
+      setUserStats(updatedStats);
+
+      // 3. Generate new plan with progressive overload
+      const res = await fetch('/api/generate-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stats: updatedStats, isTired: false, feedback })
+      });
+      
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      setPlans(data.exercisePlan, data.nutritionPlan);
+      setCheckInComplete(true);
+      setTimeout(() => setCheckInComplete(false), 5000); // Hide success message after 5s
+
+    } catch (error) {
+      alert("Failed to complete check-in.");
+    } finally {
+      setIsCheckingIn(false);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
@@ -84,14 +113,43 @@ export default function DashboardPage() {
         </Link>
       </header>
 
+      <div className="bg-gradient-to-r from-blue-900/40 to-emerald-900/40 p-6 rounded-2xl border border-blue-500/30 shadow-lg">
+        <h2 className="text-xl font-bold text-white mb-4">🗓️ Weekly Check-In</h2>
+        
+        {checkInComplete ? (
+          <div className="bg-emerald-500/20 text-emerald-400 p-4 rounded-xl font-bold flex items-center gap-2">
+            ✅ AI Protocol successfully updated for the new week!
+          </div>
+        ) : (
+          <div className="flex flex-col md:flex-row gap-4 items-end">
+            <div className="w-full md:w-1/3">
+              <label className="block text-xs font-bold text-slate-300 mb-2 uppercase tracking-wider">Current Weight (kg)</label>
+              <input type="number" value={newWeight} onChange={(e) => setNewWeight(e.target.value)} className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 outline-none focus:border-blue-500 transition" />
+            </div>
+            
+            <div className="w-full md:w-1/3">
+              <label className="block text-xs font-bold text-slate-300 mb-2 uppercase tracking-wider">How was last week?</label>
+              <select value={feedback} onChange={(e) => setFeedback(e.target.value)} className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 outline-none focus:border-blue-500 transition appearance-none">
+                <option value="Too Easy">Too Easy (Increase Difficulty)</option>
+                <option value="Perfect">Perfect (Maintain Intensity)</option>
+                <option value="Too Hard">Too Hard (Need Recovery)</option>
+              </select>
+            </div>
+            
+            <button onClick={handleCheckIn} disabled={isCheckingIn} className="w-full md:w-1/3 bg-blue-600 hover:bg-blue-500 text-white font-bold p-3 rounded-xl transition disabled:opacity-50">
+              {isCheckingIn ? 'Recalculating Protocol...' : 'Update & Generate AI Plan'}
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* User Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+     <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {[
           { label: "Goal", value: userStats?.goal || "Not set", color: "text-blue-400" },
           { label: "Weight", value: currentWeight ? `${currentWeight} kg` : "--", color: "text-white" },
           { label: "Height", value: userStats?.height ? `${userStats.height} cm` : "--", color: "text-white" },
           { label: "Age", value: userStats?.age || "--", color: "text-white" },
-          // --- UPDATED: Display BMI with Grade ---
           { label: "Current BMI", value: isNaN(numericBMI) ? "--" : `${currentBMI}`, grade: bmiGrade, color: bmiColor }
         ].map((stat, i) => (
           <div key={i} className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800 shadow-sm flex flex-col justify-center">
