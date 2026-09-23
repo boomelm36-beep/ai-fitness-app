@@ -15,6 +15,16 @@ export async function POST(req: Request) {
     const availableEquipment = stats.equipment?.length > 0 ? stats.equipment.join(", ") : "Bodyweight only";
     const eatingStyle = stats.eatingMethods?.length > 0 ? stats.eatingMethods.join(", ") : "Standard / Anything";
     const allergyList = stats.allergies?.length > 0 ? stats.allergies.join(", ") : "None";
+    const foodAccessList = stats.foodAccess?.length > 0 ? stats.foodAccess.join(", ") : "Standard options";
+
+    // EXPLICIT REGIONAL / LOCAL FOOD RULE
+    const isThaiFoodAccess = stats.foodAccess?.some((f: string) => 
+      f.toLowerCase().includes("thailand") || f.toLowerCase().includes("thai")
+    );
+
+    const regionalContext = isThaiFoodAccess
+      ? `CRITICAL REGIONAL DIET RULE: The user is located in THAILAND / relying on Thai food access. ALL meal titles and descriptions MUST feature authentic, widely accessible Thai dishes or Thai market staples tailored strictly to their macros and eating style (e.g. Kai Jeow, Gai Yang, Tom Yum, Moo Ping, Thai street food/local markets/7-Eleven Thailand options). Do NOT recommend generic Western meals like "Oatmeal with blueberries" or "Turkey slices".`
+      : `CRITICAL FOOD ACCESS RULE: All meal recommendations MUST strictly use ingredients and dishes available through the user's specified food access: "${foodAccessList}".`;
 
     const ifContext = stats.eatingMethods?.includes("Intermittent Fasting") && stats.ifSchedule
       ? `USER PRACTICES INTERMITTENT FASTING. Eating window: ${stats.ifSchedule}. ALL scheduled meals MUST fall within this time window.`
@@ -28,16 +38,18 @@ export async function POST(req: Request) {
     }
 
     const prompt = `You are an expert personal trainer and nutritionist. Generate a complete workout and nutrition plan.
-Return ONLY valid JSON matching the exact schema below. Do NOT write any conversational text or markdown explanation outside of the JSON object.
+Return ONLY valid JSON matching the exact schema below. Do NOT write any markdown explanation outside of the JSON object.
 
 User Profile:
 - Age: ${stats.age || 25}, Gender: ${stats.gender || "Not specified"}, Weight: ${stats.weight || 70}kg, Height: ${stats.height || 170}cm
 - Goal: ${stats.goal || "Stay fit"}
 - Available Equipment: ${availableEquipment}
 - Swimming Pool Access: ${stats.swimmingPool ? "Yes" : "No"}
+- Food Access / Location: ${foodAccessList}
 - Dietary Preferences: ${eatingStyle}
 - Allergies / Exclusions: ${allergyList}
 
+${regionalContext}
 ${ifContext}
 ${overloadInstructions}
 ${isTired ? "USER IS TIRED TODAY: Adjust Day 1 for active recovery / mobility." : ""}
@@ -45,7 +57,7 @@ ${isTired ? "USER IS TIRED TODAY: Adjust Day 1 for active recovery / mobility." 
 STRICT FORMAT RULES:
 1. Provide 7 daily routines (Monday to Sunday) with 1-2 key exercises per day.
 2. Keep exercise step descriptions concise (max 2 short bullet steps per exercise).
-3. Provide target macros and 3 daily meals.
+3. Provide target macros and 3 daily meals matching their local food access.
 
 REQUIRED JSON SCHEMA:
 {
@@ -80,7 +92,7 @@ REQUIRED JSON SCHEMA:
       {
         "title": "Breakfast",
         "time": "12:00 PM",
-        "description": "Scrambled eggs with spinach.",
+        "description": "Authentic local meal description.",
         "calories": 500,
         "protein": 35,
         "carbs": 10,
@@ -92,18 +104,16 @@ REQUIRED JSON SCHEMA:
 
     const completion = await groq.chat.completions.create({
       messages: [
-        { role: "user", content: prompt } // Note: GPT-OSS models prefer instructions directly in user prompt
+        { role: "user", content: prompt }
       ],
       model: "openai/gpt-oss-120b",
       temperature: 0.2,
-      max_completion_tokens: 4000,
+      max_completion_tokens: 3000,
       response_format: { type: "json_object" },
-      reasoning_format: "hidden" // Suppresses <think> tags so JSON validation succeeds
+      reasoning_format: "hidden"
     } as any);
 
     let textResponse = completion.choices[0]?.message?.content || "{}";
-    
-    // Clean up potential code block wrappers
     textResponse = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
     const parsedData = JSON.parse(textResponse);
 
