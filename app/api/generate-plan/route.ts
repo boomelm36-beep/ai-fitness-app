@@ -17,24 +17,23 @@ export async function POST(req: Request) {
     const allergyList = stats.allergies?.length > 0 ? stats.allergies.join(", ") : "None";
 
     const ifContext = stats.eatingMethods?.includes("Intermittent Fasting") && stats.ifSchedule
-      ? `USER PRACTICES INTERMITTENT FASTING. Eating window: ${stats.ifSchedule}. ALL scheduled meals MUST strictly fall within this specific time period.`
+      ? `USER PRACTICES INTERMITTENT FASTING. Eating window: ${stats.ifSchedule}. ALL scheduled meals MUST fall within this time window.`
       : "";
 
     let overloadInstructions = "";
     if (feedback === "Too Easy") {
-      overloadInstructions = "PROGRESSIVE OVERLOAD: Increase weights or rep targets slightly compared to last week.";
+      overloadInstructions = "PROGRESSIVE OVERLOAD: Increase weights or rep targets slightly.";
     } else if (feedback === "Too Hard") {
-      overloadInstructions = "RECOVERY ADJUSTMENT: Lower the workout intensity slightly to allow recovery.";
+      overloadInstructions = "RECOVERY ADJUSTMENT: Lower workout intensity slightly.";
     }
 
-    const prompt = `Act as an expert personal trainer and nutritionist. Generate a full exercise and nutrition plan in valid JSON format.
+    const prompt = `Act as an expert personal trainer and nutritionist. Generate a complete workout and nutrition plan in valid JSON format.
 
 User Profile:
 - Age: ${stats.age || 25}, Gender: ${stats.gender || "Not specified"}, Weight: ${stats.weight || 70}kg, Height: ${stats.height || 170}cm
 - Goal: ${stats.goal || "Stay fit"}
 - Available Equipment: ${availableEquipment}
 - Swimming Pool Access: ${stats.swimmingPool ? "Yes" : "No"}
-- Food Access: ${stats.foodAccess?.length > 0 ? stats.foodAccess.join(", ") : "Standard options"}
 - Dietary Preferences: ${eatingStyle}
 - Allergies / Exclusions: ${allergyList}
 
@@ -42,14 +41,12 @@ ${ifContext}
 ${overloadInstructions}
 ${isTired ? "USER IS TIRED TODAY: Adjust Day 1 for active recovery / mobility." : ""}
 
-STRICT CONSTRAINTS:
-1. Keep exercise descriptions concise (max 2 short bullet steps per exercise).
-2. Equipment: ONLY use listed equipment (${availableEquipment}).
-3. Diet: Strictly respect "${eatingStyle}" and DO NOT include forbidden items (${allergyList}).
-4. Weekly Routine: Provide 7 daily routines (Monday to Sunday).
-5. Nutrition: Provide overall macro targets and 3-4 daily meals.
+STRICT FORMAT RULES:
+1. Provide 7 daily routines (Monday to Sunday) with 2 key exercises per day.
+2. Keep exercise step descriptions concise (max 2 short bullet steps per exercise).
+3. Provide target macros and 3 daily meals.
+4. Output MUST strictly follow this JSON structure:
 
-Required JSON Schema:
 {
   "exercisePlan": {
     "overview": "Short strategy summary.",
@@ -61,13 +58,13 @@ Required JSON Schema:
         "intensity": "High",
         "exercises": [
           {
-            "name": "Kettlebell Press",
-            "sets": "4",
-            "reps": "8 per arm",
+            "name": "Pushups",
+            "sets": "3",
+            "reps": "12",
             "rest": "60s",
-            "details": "4 sets of 8 reps per arm",
-            "steps": ["Clean kettlebell to shoulder height.", "Press overhead keeping core engaged."],
-            "youtubeQuery": "Kettlebell Press form"
+            "details": "3 sets of 12 reps",
+            "steps": ["Keep core tight.", "Lower chest to ground."],
+            "youtubeQuery": "Pushup form"
           }
         ]
       }
@@ -80,13 +77,13 @@ Required JSON Schema:
     "targetFat": 65,
     "meals": [
       {
-        "title": "Meal 1",
+        "title": "Breakfast",
         "time": "12:00 PM",
-        "description": "Short description of meal.",
-        "calories": 600,
-        "protein": 45,
-        "carbs": 50,
-        "fat": 18
+        "description": "Scrambled eggs with spinach.",
+        "calories": 500,
+        "protein": 35,
+        "carbs": 10,
+        "fat": 25
       }
     ]
   }
@@ -94,18 +91,12 @@ Required JSON Schema:
 
     const completion = await groq.chat.completions.create({
       messages: [
-        {
-          role: "system",
-          content: "You are a specialized AI fitness generator. You MUST respond with valid JSON only. Keep descriptions concise."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
+        { role: "system", content: "You are a specialized AI fitness coach. Output valid JSON only." },
+        { role: "user", content: prompt }
       ],
-      model: "mixtral-8x7b-32768", // Non-Llama model (Mistral AI)
-      temperature: 0.3,
-      max_tokens: 4000,
+      model: "openai/gpt-oss-20b", // Free model hosted on Groq API
+      temperature: 0.2,
+      max_tokens: 2500,
       response_format: { type: "json_object" }
     });
 
