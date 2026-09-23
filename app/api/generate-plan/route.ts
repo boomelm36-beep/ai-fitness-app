@@ -58,7 +58,7 @@ const chatCompletion = await groq.chat.completions.create({
           content: prompt,
         }
       ],
-      model: "llama-3.3-70b-versatile", // <-- Update this line to the new model
+      model: "openai/gpt-oss-120b", // <-- Update this line to the new model
       temperature: 0.5,
       response_format: { type: "json_object" }, 
     });
