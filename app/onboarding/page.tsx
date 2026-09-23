@@ -7,7 +7,7 @@ import { useAppStore } from "@/store";
 
 const EQUIPMENT_OPTIONS = ["Treadmill", "Dumbbell", "Kettlebell", "Barbell", "Resistance Bands", "Pull-up Bar"];
 const FOOD_OPTIONS = ["7-11 (Convenience Store)", "Street Food / Made-to-order", "Food Delivery (Grab/Line Man)", "Home Cooking"];
-const EATING_METHODS = ["Anything", "Ketogenic", "Low carb", "Carnivore Diet", "High Protein", "Intermittent Fasting"];
+const EATING_METHODS = ["Anything", "Ketogenic", "Low carb", "Carnivore Diet", "High Protein", "Intermittent Fasting", "Vegetarian", "Vegan"];
 const ALLERGY_OPTIONS = ["Peanuts", "Seafood", "Shellfish", "Dairy", "Gluten", "Pork", "Eggs", "Soy", "Beef", "Vegetables"];
 
 export default function Onboarding() {
