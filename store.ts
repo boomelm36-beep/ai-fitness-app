@@ -10,14 +10,17 @@ interface UserStats {
   equipment: string[];
   swimmingPool: boolean;
   foodAccess: string[];
-  eatingMethods: string[]; // <-- New field
-  allergies: string[];     // <-- New field
+  eatingMethods: string[];
+  allergies: string[];
+  gender: string; // <-- New
 }
 
 interface AppState {
   userStats: UserStats | null;
   exercisePlan: any | null;
   nutritionPlan: any | null;
+  username: string | null; // <-- New
+  setUsername: (name: string | null) => void; // <-- New
   setUserStats: (stats: UserStats) => void;
   setPlans: (exercise: any, nutrition: any) => void;
 }
@@ -30,6 +33,8 @@ export const useAppStore = create<AppState>()(
       nutritionPlan: null,
       setUserStats: (stats) => set({ userStats: stats }),
       setPlans: (exercise, nutrition) => set({ exercisePlan: exercise, nutritionPlan: nutrition }),
+      username: null,
+      setUsername: (name) => set({ username: name }),
     }),
     {
       name: 'ai-fit-storage',

@@ -54,6 +54,19 @@ export default function AuthPage() {
         return;
       }
 
+      if (isSignUp) {
+        const { data: authData, error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        
+        // Save the username to the profiles table
+        if (authData.user) {
+          await supabase.from('profiles').insert({
+            id: authData.user.id,
+            username: username
+          });
+        }
+      }
+
       router.push("/dashboard");
     }
   };
@@ -87,6 +100,16 @@ export default function AuthPage() {
               onChange={(e) => setUsername(e.target.value)}
               required
               className={inputClass}
+            />
+          )}
+          {isSignUp && (
+            <input 
+              type="text" 
+              placeholder="Username" 
+              value={username} 
+              onChange={(e) => setUsername(e.target.value)} 
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-white mb-4 outline-none focus:border-blue-500"
+              required
             />
           )}
           <input

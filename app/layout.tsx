@@ -1,6 +1,7 @@
 // app/layout.tsx
 import './globals.css'
 import Navbar from '@/components/Navbar'
+import type { Metadata } from "next";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -14,3 +15,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   )
 }
+
+export const metadata: Metadata = {
+  title: "AI Fitness Protocol",
+  description: "Your personalized AI fitness and nutrition tracker.",
+  manifest: "/manifest.json",
+  themeColor: "#0f172a",
+};

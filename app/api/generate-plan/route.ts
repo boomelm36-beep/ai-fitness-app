@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     }
 
     const prompt = `Act as an expert personal trainer and nutritionist. 
-    User Stats: Age ${stats.age}, Weight ${stats.weight}kg, Height ${stats.height}cm, Goal: ${stats.goal}. 
+    User Stats: Age ${stats.age}, Gender: ${stats.gender || "Not specified"}, Weight ${stats.weight}kg, Height ${stats.height}cm, Goal: ${stats.goal}.
     EQUIPMENT AVAILABLE: ${availableEquipment}.
     Swimming Pool Access: ${stats.swimmingPool ? "Yes" : "No"}.
     Food Access: ${stats.foodAccess?.length > 0 ? stats.foodAccess.join(", ") : "Standard options"}.

@@ -86,6 +86,9 @@ export default function Navbar() {
               <Link href="/exercise" className="text-slate-300 hover:text-white transition">Exercise</Link>
               <Link href="/nutrition" className="text-slate-300 hover:text-white transition">Nutrition</Link>
               <Link href="/weight" className="text-slate-300 hover:text-white transition">Weight</Link>
+              <Link href="/account" className="text-white font-bold bg-slate-800 px-4 py-2 rounded-full hover:bg-slate-700 transition">
+                {username ? username : "My Account"}
+              </Link>
             </div>
           )}
 
