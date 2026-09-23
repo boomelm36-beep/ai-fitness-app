@@ -56,36 +56,50 @@ export default function AccountPage() {
   };
 
   const subscribeToNotifications = async () => {
+    // 1. Check browser support
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       alert("Push notifications are not supported in this browser.");
       return;
     }
 
     try {
-      // Check if a service worker is ACTUALLY registered instead of waiting forever
-      const registration = await navigator.serviceWorker.getRegistration();
+      // 2. Look for existing Service Worker; if missing, register /sw.js manually
+      let registration = await navigator.serviceWorker.getRegistration();
       
       if (!registration) {
-        alert("Service Worker not found! If testing locally, ensure 'disable: false' in next.config.ts and restart your server.");
+        console.log("No active Service Worker found. Registering /sw.js manually...");
+        registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+      }
+
+      // 3. Wait until the service worker is fully active and ready
+      await navigator.serviceWorker.ready;
+
+      // 4. Request explicit notification permissions from the browser
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        alert("Notification permission was denied. Please allow notifications in your browser settings.");
         return;
       }
 
+      // 5. Check if device is already subscribed
       const existingSub = await registration.pushManager.getSubscription();
       if (existingSub) {
-        alert("Notifications are already enabled!");
+        alert("Notifications are already enabled for this device! 🔔");
         return;
       }
 
       if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
-        alert("Missing VAPID Public Key in .env file.");
+        alert("Missing NEXT_PUBLIC_VAPID_PUBLIC_KEY in environment variables.");
         return;
       }
 
+      // 6. Subscribe via PushManager
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY)
       });
 
+      // 7. Save subscription to Supabase
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const res = await fetch('/api/push/subscribe', {
@@ -94,11 +108,11 @@ export default function AccountPage() {
           body: JSON.stringify({ subscription, userId: user.id })
         });
         
-        if (!res.ok) throw new Error("Failed to save to database");
+        if (!res.ok) throw new Error("Failed to save subscription to database.");
         alert("Notifications successfully enabled! 🔔");
       }
     } catch (error: any) {
-      console.error("Subscription failed:", error);
+      console.error("Subscription error:", error);
       alert(`Failed to enable notifications: ${error.message}`);
     }
   };
