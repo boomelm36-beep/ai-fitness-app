@@ -103,7 +103,7 @@ Required JSON Schema:
           content: prompt
         }
       ],
-      model: "llama-3.3-70b-versatile",
+      model: "llama-3.1-70b-versatile",
       temperature: 0.3,
       max_completion_tokens: 4000,
       response_format: { type: "json_object" }
