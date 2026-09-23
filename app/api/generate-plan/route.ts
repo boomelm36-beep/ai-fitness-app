@@ -7,82 +7,114 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 export async function POST(req: Request) {
   try {
     const { stats, isTired, feedback } = await req.json();
-    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
 
-    const availableEquipment = stats.equipment?.length > 0 
-      ? stats.equipment.join(", ") 
-      : "Bodyweight only (NO equipment)";
+    if (!stats) {
+      return NextResponse.json({ error: "User stats are required" }, { status: 400 });
+    }
 
-    const eatingStyle = stats.eatingMethods?.length > 0 ? stats.eatingMethods.join(", ") : "Anything / Standard";
+    const availableEquipment = stats.equipment?.length > 0 ? stats.equipment.join(", ") : "Bodyweight only";
+    const eatingStyle = stats.eatingMethods?.length > 0 ? stats.eatingMethods.join(", ") : "Standard / Anything";
     const allergyList = stats.allergies?.length > 0 ? stats.allergies.join(", ") : "None";
 
-    // --- NEW: Add IF Context ---
     const ifContext = stats.eatingMethods?.includes("Intermittent Fasting") && stats.ifSchedule
       ? `USER PRACTICES INTERMITTENT FASTING. Eating window: ${stats.ifSchedule}. ALL scheduled meals MUST strictly fall within this specific time period.`
       : "";
 
-    // Progressive Overload Logic
     let overloadInstructions = "";
     if (feedback === "Too Easy") {
-      overloadInstructions = "PROGRESSIVE OVERLOAD REQUIRED: The user found last week too easy. Increase the intensity slightly by adding weight, adding reps, or adding a set to the exercises.";
+      overloadInstructions = "PROGRESSIVE OVERLOAD: Increase weights or rep targets slightly compared to last week.";
     } else if (feedback === "Too Hard") {
-      overloadInstructions = "DELOAD REQUIRED: The user found last week too hard. Reduce the total volume (fewer sets or reps) to allow for recovery.";
-    } else if (feedback === "Perfect") {
-      overloadInstructions = "MAINTAIN MOMENTUM: The user found last week perfect. Keep the intensity similar but slightly vary the exercises to prevent plateau.";
+      overloadInstructions = "RECOVERY ADJUSTMENT: Lower the workout intensity slightly to allow recovery.";
     }
 
-    const prompt = `Act as an expert personal trainer and nutritionist. 
-    User Stats: Age ${stats.age}, Gender: ${stats.gender || "Not specified"}, Weight ${stats.weight}kg, Height ${stats.height}cm, Goal: ${stats.goal}.
-    EQUIPMENT AVAILABLE: ${availableEquipment}.
-    Swimming Pool Access: ${stats.swimmingPool ? "Yes" : "No"}.
-    Food Access: ${stats.foodAccess?.length > 0 ? stats.foodAccess.join(", ") : "Standard options"}.
-    DIETARY STYLE: ${eatingStyle}. ALLERGIES: ${allergyList}.
+    const prompt = `Act as an expert personal trainer and nutritionist. Generate a full exercise and nutrition plan in valid JSON format.
 
-    ${ifContext}
-    ${overloadInstructions}
-    ${isTired ? "USER IS TIRED TODAY. Adjust today's routine for active recovery and light mobility." : ""}
-    
-    STRICT CONSTRAINTS:
-    1. EQUIPMENT: ONLY use listed equipment. No dumbbells/barbells if "Bodyweight only".
-    2. DIET: Strictly follow "${eatingStyle}" and DO NOT include: ${allergyList}.${ifContext ? "Strictly respect the Intermittent Fasting eating window." : ""}
-    3. SCHEDULE (CRITICAL): Generate a full 7-day routine. You MUST include exactly 7 objects in the "weeklyRoutine" array (Monday to Sunday).
-    4. NUTRITION (CRITICAL): Provide at least 3-4 meals. Adjust calories based on their new weight of ${stats.weight}kg and goal.
-    5. INSTRUCTIONS: Provide 3-4 steps and a YouTube search term for each exercise.
+User Profile:
+- Age: ${stats.age || 25}, Gender: ${stats.gender || "Not specified"}, Weight: ${stats.weight || 70}kg, Height: ${stats.height || 170}cm
+- Goal: ${stats.goal || "Stay fit"}
+- Available Equipment: ${availableEquipment}
+- Swimming Pool Access: ${stats.swimmingPool ? "Yes" : "No"}
+- Food Access: ${stats.foodAccess?.length > 0 ? stats.foodAccess.join(", ") : "Standard options"}
+- Dietary Preferences: ${eatingStyle}
+- Allergies / Exclusions: ${allergyList}
 
-    Output ONLY valid JSON matching this exact structure:
-    {
-      "exercisePlan": {
-        "overview": "Motivational summary acknowledging their feedback and new weight.",
-        "weeklyRoutine": [
-          { "day": "Monday", "focus": "Upper Body", "duration": "45 mins", "intensity": "High", "exercises": [ { "name": "Push-Ups", "details": "3 sets of 12 reps", "steps": ["Step 1..."], "youtubeSearch": "Push-Ups form tutorial" } ] }
+${ifContext}
+${overloadInstructions}
+${isTired ? "USER IS TIRED TODAY: Adjust Day 1 for active recovery / mobility." : ""}
+
+STRICT CONSTRAINTS:
+1. Keep exercise descriptions and steps concise (max 2 short bullet steps per exercise) to ensure full JSON completion.
+2. Equipment: ONLY use listed equipment (${availableEquipment}).
+3. Diet: Strictly respect "${eatingStyle}" and DO NOT include forbidden items (${allergyList}).
+4. Weekly Routine: Provide 7 daily routines (Monday to Sunday).
+5. Nutrition: Provide overall macro targets and 3-4 daily meals.
+
+Required JSON Schema:
+{
+  "exercisePlan": {
+    "overview": "Short strategy summary.",
+    "weeklyRoutine": [
+      {
+        "day": "Monday",
+        "focus": "Upper Body",
+        "duration": "45 mins",
+        "intensity": "High",
+        "exercises": [
+          {
+            "name": "Kettlebell Press",
+            "sets": "4",
+            "reps": "8 per arm",
+            "rest": "60s",
+            "details": "4 sets of 8 reps per arm",
+            "steps": ["Clean kettlebell to shoulder height.", "Press overhead keeping core engaged."],
+            "youtubeQuery": "Kettlebell Press form"
+          }
         ]
-      },
-      "nutritionPlan": {
-        "dailyCalories": 2200,
-        "macros": { "protein": 150, "carbs": 20, "fat": 120 },
-        "meals": [ { "time": "Breakfast", "name": "Meal name", "calories": 400, "desc": "Description" } ]
       }
-    }`;
+    ]
+  },
+  "nutritionPlan": {
+    "targetCalories": 2200,
+    "targetProtein": 160,
+    "targetCarbs": 180,
+    "targetFat": 65,
+    "meals": [
+      {
+        "title": "Meal 1",
+        "time": "12:00 PM",
+        "description": "Short description of meal.",
+        "calories": 600,
+        "protein": 45,
+        "carbs": 50,
+        "fat": 18
+      }
+    ]
+  }
+}`;
 
-    const chatCompletion = await groq.chat.completions.create({
+    const completion = await groq.chat.completions.create({
       messages: [
         {
           role: "system",
-          content: "You are a strict fitness AI. Output a complete 7-day schedule. Output ONLY valid JSON without markdown.",
+          content: "You are a specialized AI fitness generator. You MUST respond with valid JSON only. Keep descriptions concise."
         },
-        { role: "user", content: prompt }
+        {
+          role: "user",
+          content: prompt
+        }
       ],
-      model: "openai/gpt-oss-120b",
+      model: "llama-3.3-70b-versatile",
       temperature: 0.3,
-      max_tokens: 4000,
-      response_format: { type: "json_object" }, 
+      max_completion_tokens: 4000,
+      response_format: { type: "json_object" }
     });
 
-    let textResponse = chatCompletion.choices[0]?.message?.content || "{}";
-    const data = JSON.parse(textResponse);
+    const textResponse = completion.choices[0]?.message?.content || "{}";
+    const parsedData = JSON.parse(textResponse);
 
-    return NextResponse.json({ exercisePlan: data.exercisePlan, nutritionPlan: data.nutritionPlan });
+    return NextResponse.json(parsedData);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Generate Plan Error:", error);
+    return NextResponse.json({ error: error.message || "Failed to generate plan" }, { status: 500 });
   }
 }
