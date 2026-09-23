@@ -62,31 +62,44 @@ export default function AccountPage() {
     }
 
     try {
-      const registration = await navigator.serviceWorker.ready;
-      const existingSub = await registration.pushManager.getSubscription();
+      // Check if a service worker is ACTUALLY registered instead of waiting forever
+      const registration = await navigator.serviceWorker.getRegistration();
       
+      if (!registration) {
+        alert("Service Worker not found! If testing locally, ensure 'disable: false' in next.config.ts and restart your server.");
+        return;
+      }
+
+      const existingSub = await registration.pushManager.getSubscription();
       if (existingSub) {
         alert("Notifications are already enabled!");
         return;
       }
 
+      if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
+        alert("Missing VAPID Public Key in .env file.");
+        return;
+      }
+
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!)
+        applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY)
       });
 
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        await fetch('/api/push/subscribe', {
+        const res = await fetch('/api/push/subscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ subscription, userId: user.id })
         });
+        
+        if (!res.ok) throw new Error("Failed to save to database");
         alert("Notifications successfully enabled! 🔔");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Subscription failed:", error);
-      alert("Failed to enable notifications. Make sure you granted browser permissions.");
+      alert(`Failed to enable notifications: ${error.message}`);
     }
   };
 

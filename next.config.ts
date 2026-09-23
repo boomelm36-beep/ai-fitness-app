@@ -5,13 +5,11 @@ import withPWAInit from "@ducanh2912/next-pwa";
 const withPWA = withPWAInit({
   dest: "public",
   customWorkerSrc: "worker", 
-  disable: process.env.NODE_ENV === "development", 
+  disable: false, // <-- Change this to false temporarily to test locally
 });
 
 const nextConfig: NextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  typescript: { ignoreBuildErrors: true },
   turbopack: {}, 
 };
 
