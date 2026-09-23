@@ -51,7 +51,7 @@ export default function Navbar() {
           <div className="flex items-center gap-2 border-r border-slate-800 pr-4 sm:pr-6">
             {/* Username Text */}
             <span className="text-white font-bold text-sm hidden sm:block">
-              {username || "User"}
+              Welcome! {username || "User"}
             </span>
 
             {/* My Account Gear Icon */}
