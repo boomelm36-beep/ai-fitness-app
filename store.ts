@@ -9,7 +9,9 @@ interface UserStats {
   age: string;
   equipment: string[];
   swimmingPool: boolean;
-  foodAccess: string[]; // <-- New field
+  foodAccess: string[];
+  eatingMethods: string[]; // <-- New field
+  allergies: string[];     // <-- New field
 }
 
 interface AppState {
@@ -30,7 +32,7 @@ export const useAppStore = create<AppState>()(
       setPlans: (exercise, nutrition) => set({ exercisePlan: exercise, nutritionPlan: nutrition }),
     }),
     {
-      name: 'ai-fit-storage', // This key saves the data in localStorage
+      name: 'ai-fit-storage',
     }
   )
 )
