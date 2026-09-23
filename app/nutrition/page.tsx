@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useAppStore } from "@/store";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation"; // Add this import at the top
+import Link from "next/link";
 
 export default function NutritionPage() {
   const { nutritionPlan } = useAppStore();
@@ -138,6 +139,19 @@ export default function NutritionPage() {
       
       {/* Tracker Headers */}
       <div className="grid md:grid-cols-3 gap-6">
+        <Link 
+          href="/fridge" 
+          className="flex items-center justify-between bg-gradient-to-r from-purple-900/40 to-blue-900/40 border border-purple-500/30 p-4 rounded-2xl hover:border-purple-400 transition"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">🥗</span>
+            <div>
+              <h3 className="text-white font-bold text-sm">Scan My Fridge</h3>
+              <p className="text-slate-400 text-xs">Upload a photo of your ingredients to generate custom recipes.</p>
+            </div>
+          </div>
+          <span className="text-purple-400 font-bold text-sm">Scan Now →</span>
+        </Link>
         
         {/* Main Calories & Macros */}
         <div className="md:col-span-2 bg-slate-900/80 p-6 rounded-3xl border border-slate-800 shadow-xl">
@@ -236,7 +250,6 @@ export default function NutritionPage() {
           </div>
         )}
       </div>
-
       {/* AI Suggested Menu */}
       <div>
         <h2 className="text-2xl font-bold text-white mb-6">AI Suggested Menu</h2>
