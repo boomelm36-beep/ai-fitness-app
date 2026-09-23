@@ -1,6 +1,6 @@
 // app/auth/page.tsx
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react"; // <-- Add useEffect here
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
