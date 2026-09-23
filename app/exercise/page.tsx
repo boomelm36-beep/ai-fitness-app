@@ -291,45 +291,47 @@ export default function ExercisePage() {
                   </span>
                 </div>
 
-          {/* Inside app/exercise/page.tsx - Weekly Routine Exercise Loop */}
-          <div className="space-y-3">
-            {dayPlan.exercises?.map((ex: any, exIdx: number) => (
-              <div key={exIdx} className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800/80 space-y-2">
-                <div className="flex justify-between items-start gap-2">
-                  <h4 className="font-bold text-white text-sm">{ex.name}</h4>
-                  
-                  <div className="flex items-center gap-2 shrink-0">
-                    {/* Watch Video Button */}
-                    <a
-                      href={`https://www.youtube.com/results?search_query=${encodeURIComponent(ex.youtubeQuery || `${ex.name} exercise form`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[10px] bg-red-950/60 hover:bg-red-900/80 text-red-300 font-bold px-2.5 py-1 rounded-lg border border-red-500/40 transition flex items-center gap-1"
-                    >
-                      ▶ Watch Video
-                    </a>
+                <div className="space-y-3">
+                  {dayPlan.exercises?.map((ex: any, exIdx: number) => (
+                    <div key={exIdx} className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800/80 space-y-2">
+                      <div className="flex justify-between items-start gap-2">
+                        <h4 className="font-bold text-white text-sm">{ex.name}</h4>
+                        
+                        <div className="flex items-center gap-2 shrink-0">
+                          {/* Watch Video Button */}
+                          <a
+                            href={`https://www.youtube.com/results?search_query=${encodeURIComponent(ex.youtubeQuery || `${ex.name} exercise form`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] bg-red-950/60 hover:bg-red-900/80 text-red-300 font-bold px-2.5 py-1 rounded-lg border border-red-500/40 transition flex items-center gap-1"
+                          >
+                            ▶ Watch Video
+                          </a>
 
-                    {/* Fill Form Button */}
-                    <button
-                      onClick={() => setExerciseName(ex.name)}
-                      className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-2.5 py-1 rounded-lg border border-slate-700 transition"
-                    >
-                      Fill Form
-                    </button>
-                  </div>
+                          {/* Fill Form Button */}
+                          <button
+                            onClick={() => setExerciseName(ex.name)}
+                            className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-2.5 py-1 rounded-lg border border-slate-700 transition"
+                          >
+                            Fill Form
+                          </button>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-slate-400">
+                        Sets: {ex.sets} | Reps: {ex.reps} | Rest: {ex.rest}
+                      </p>
+
+                      {ex.steps?.length > 0 && (
+                        <ul className="list-disc list-inside text-[11px] text-slate-400 space-y-0.5 pt-1">
+                          {ex.steps.map((step: string, sIdx: number) => (
+                            <li key={sIdx}>{step}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
                 </div>
-
-                <p className="text-xs text-slate-400">
-                  Sets: {ex.sets} | Reps: {ex.reps} | Rest: {ex.rest}
-                </p>
-
-                {ex.steps?.length > 0 && (
-                  <ul className="list-disc list-inside text-[11px] text-slate-400 space-y-0.5 pt-1">
-                    {ex.steps.map((step: string, sIdx: number) => (
-                      <li key={sIdx}>{step}</li>
-                    ))}
-                  </ul>
-                )}
               </div>
             ))}
           </div>
