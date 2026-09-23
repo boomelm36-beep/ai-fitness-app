@@ -4,7 +4,7 @@ import webPush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
 
 webPush.setVapidDetails(
-  'boomelm36@gmail.com', // Replace with your email
+  'mailto:boomelm36@gmail.com', // Replace with your email
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
   process.env.VAPID_PRIVATE_KEY!
 );
